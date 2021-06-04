@@ -1,18 +1,24 @@
 [submodule "nita-webapp"]
 	path = nita-webapp
 	url = https://github.com/Juniper/nita-webapp.git
+	branch = main
 [submodule "nita-ansible"]
 	path = nita-ansible
 	url = https://github.com/Juniper/nita-ansible.git
+	branch = main
 [submodule "nita-jenkins"]
 	path = nita-jenkins
 	url = https://github.com/Juniper/nita-jenkins.git
+	branch = main
 [submodule "nita-robot"]
 	path = nita-robot
 	url = https://github.com/Juniper/nita-robot.git
+	branch = main
 [submodule "nita-yaml-to-excel"]
 	path = nita-yaml-to-excel
 	url = https://github.com/Juniper/nita-yaml-to-excel.git
+	branch = main
 [submodule "nita-cli"]
 	path = nita-cli
 	url = https://github.com/Juniper/nita-cli.git
+	branch = main
