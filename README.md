@@ -1,6 +1,6 @@
-# NITA 21.7
+# NITA
 
-Welcome to NITA 21.7.
+Welcome to NITA.
 
 NITA is an open source platform for automating the building and testing of complex networks. 
 
@@ -18,6 +18,13 @@ As a platform, NITA comprises some of the best Automation tools currently availa
 * Docker, for packaging and easy deployment
 
 In a nutshell, NITA can be used as a toolbox from which you can automate the deployment and testing of very complex networks. It is vendor neutral and so can be used to build and test networks from all of the leading vendors in the market. And because it is a toolbox it can be extended to include any other tool that you may need.
+
+# Training
+
+If you are planning on using NITA or any of the technologies related to NITA then please consider following the Juniper Networks Automation and DevOps Learning Path
+and taking the Junos Platform and Automation training courses.  These will give you the essential knowledge you need to do successful network automation! For more information, please see the link below:
+
+https://learningportal.juniper.net/juniper/user_activity_info.aspx?id=10840
 
 # Installation
 
@@ -45,9 +52,3 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-# Training
-
-If you are planning on using NITA or any of the technologies related to NITA then please consider going on the Juniper JAUT and AJAUT courses.  These will give you the essential knowledge you need to do successful network automation!
-
-https://learningportal.juniper.net/juniper/user_activity_info.aspx?id=10840
