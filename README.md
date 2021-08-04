@@ -19,6 +19,19 @@ As a platform, NITA comprises some of the best Automation tools currently availa
 
 In a nutshell, NITA can be used as a toolbox from which you can automate the deployment and testing of very complex networks. It is vendor neutral and so can be used to build and test networks from all of the leading vendors in the market. And because it is a toolbox it can be extended to include any other tool that you may need.
 
+# Examples
+
+If you want to experiment to see what NITA can do, we currently have [2 example projects](https://github.com/Juniper/nita-webapp/tree/21.7/examples) that are provided in the webapp repository:
+
+* Build and test an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita-webapp/tree/21.7/examples/evpn_vxlan_erb_dc)
+
+    This includes all of the config that you need to build the data centre fabric and VXLAN overlay along with 14 example Robot tests for the firewalls, switches, BGP leaf and spine devices and end IP connectivity.
+We show integration with other operational tools for "Day 2 Management", storing inventory in Netbox and having that push changes to the network via the Juniper Paragon Insights product.
+
+* Build and test a [Simple DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita-webapp/tree/21.7/examples/ebgp_wan)
+
+    This is between 2 example datacentres, with 13 example Robot tests for border leaf routers, DC spines and WAN PE devices, plus BGP and IP connectivity tests.
+
 # Training
 
 If you are planning on using NITA or any of the technologies related to NITA then please consider following the Juniper Networks Automation and DevOps Learning Path
