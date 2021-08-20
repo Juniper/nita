@@ -2,7 +2,11 @@
 
 Welcome to NITA 21.7.
 
-NITA is an open source platform for automating the building and testing of complex networks. 
+NITA is an open source platform for automating the building and testing of complex networks.
+
+# Release Notes
+
+For a list of new features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/21.7/README.md#217-new-features-and-bug-fixes).
 
 # History
 
