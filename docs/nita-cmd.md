@@ -1,6 +1,6 @@
 # NAME
 
-``nita-cmd``
+``nita-cmd`` Everything you need to know to drive NITA from its command line.
 
 # SYNOPSIS
 
