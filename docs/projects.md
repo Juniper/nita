@@ -53,8 +53,7 @@ host 100.123.0.17 {
 Now we need to create a [Jinja2 template](https://jinja.palletsprojects.com) that can render this configuration snippet using inventory data that will be provided by NITA. For this example, we will use the following template:
 
 ```jinja
-{# Template for Junos syslog configuration stanza #} 
-{# Test it out live at j2live.ttl255.com #}
+{# Template for Junos syslog configuration #} 
 
 system {
   syslog {
@@ -144,8 +143,8 @@ If the magic happens in ``project.yaml`` then it is the ``shell_command:`` state
 
 | Category | The ``shell_command`` Will |
 |---|---|
-| NOOB | Write YAML files, run a bash script (e.g. ``noob.sh``) in an Ansible Docker container that runs an Ansible playbook |
-| BUILD | Write YAML files, run a bash script (e.g. [``build.sh``](https://github.com/Juniper/nita-webapp/blob/main/examples/evpn_vxlan_erb_dc/build.sh) in an Ansible Docker container that runs an Ansible playbook |
+| NOOB | Write YAML files, run a bash script (e.g. noob.sh) in an Ansible Docker container that runs an Ansible playbook |
+| BUILD | Write YAML files, run a bash script (e.g. [``build.sh``](https://github.com/Juniper/nita-webapp/blob/main/examples/evpn_vxlan_erb_dc/build.sh)) in an Ansible Docker container that runs an Ansible playbook |
 | TEST | Write YAML files, run a base script (e.g. [``test.sh``](https://github.com/Juniper/nita-webapp/blob/main/examples/evpn_vxlan_erb_dc/test.sh)) in a Robot Docker container that executes tests |
 
 ### Ingredients You Need
@@ -183,11 +182,11 @@ And that is about it. Take a good look at the [EVPN VXLAN example](https://githu
 
 ## Automating Tests
 
-We've looked at how NITA can be used to automate the deployment of device configurations by using Ansible, now lets look at how we can add automated tests to verify that the deployments worked. NITA uses Robot Framework to execute tests which can uses libraries such as ``pybot`` or our modified version ``pybot_jrouter`` and this gives a huge amount of flexibility for creating automated tests. 
+We've looked at how NITA can be used to automate the deployment of device configurations by using Ansible, now lets look at how we can add automated tests to verify that the deployments worked. NITA uses Robot Framework to execute tests which can use libraries such as ``pybot`` or our modified version ``pybot_jrouter`` and this gives a huge amount of flexibility for creating automated tests. 
 
 ### Manually Testing Syslog
 
-For our Syslog example above, we might want to perform a test in two stages. Firstly we would want to have the Junos device that is under test generate a test syslog message, and then we would want to check at the loghost to make sure that the message was correctly received. Before automating any test you should try it out manually first, so that you know that everything is working as expected. But before you even do that, you will probably need to do a little configuration on your loghost, especially if it is a virgin installation. For example, if you are running ``rsyslog`` on Ubuntu you will probably need to configure it to listen for messages on UDP port 514 (the defaults) and you'll also need to permit that inbound traffic through the firewall. So you might need to set that up first, like this:
+For our Syslog example above, we might want to perform a test in two stages. Firstly we would want to have the Junos device that is under test generate a test syslog message, and then we would want to check at the loghost to make sure that the message was correctly received. Before automating any test you should try it out manually first, so that you know that everything is working as expected. But before you even do that, you will probably need to do a little configuration on your loghost, especially if it is a fresh installation. For example, if you are running ``rsyslog`` on Ubuntu you will probably need to configure it to listen for messages on UDP port 514 (the defaults) and you'll also need to permit that inbound traffic through the firewall. So you might need to set that up first, like this:
 
 ```shell
 jcluser@ubuntu% sudo vi /etc/rsyslogd.conf
