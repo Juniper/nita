@@ -85,8 +85,12 @@ echo "Hello World!" >&1
 $ sudo chmod +x nita-cmd_hello
 $ 
 ```
-Add inline debug by checking for the environment variable _CLI_RUNNER_DEBUG.
-export _CLI_RUNNER_DEBUG=1
+Add inline debugging by setting the environment variable ``_CLI_RUNNER_DEBUG`` in the parent shell, like this:
+```shell
+$ export _CLI_RUNNER_DEBUG=1
+$ ./nita-cmd_hello
+...
+```
 
 ## Hello World Help Command
 
