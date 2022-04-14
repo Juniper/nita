@@ -93,7 +93,7 @@ You can log into a NITA container by providing the ``cli`` argument to the appro
 | ``nita-cmd ansible cli 21.7`` | Start the Ansible container and log into its shell |
 | ``nita-cmd jenkins cli [ jenkins \| root ]`` | Log into the container shell as either the jenkins or root user |
 | ``nita-cmd robot cli 21.7`` | Start the robot container and log into its shell |
-| ``nita-cmd webapp cli`` | Log into the webapp contain shell |
+| ``nita-cmd webapp cli`` | Log into the webapp container shell |
 
 Note that because the Ansible and Robot containers are ephemeral, when you ``exit`` from the container's shell, the container itself will be stopped.
 
