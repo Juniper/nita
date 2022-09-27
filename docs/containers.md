@@ -25,9 +25,9 @@ The ``docker`` binary is a client for interacting with the ``dockerd`` daemon th
 $ docker ps
 CONTAINER ID        IMAGE                         COMMAND                  CREATED             STATUS                    PORTS                                         NAMES
 906f4235bd96        nginx:1.17.9                  "nginx -g 'daemon of…"   4 months ago        Up 47 minutes             80/tcp, 0.0.0.0:443->443/tcp                  nitawebapp_proxy_1
-34743b207365        juniper/nita-webapp:21.7-1    "./build-and-test-we…"   4 months ago        Up 47 minutes             8000/tcp                                      nitawebapp_webapp_1
+34743b207365        juniper/nita-webapp:22.8-1    "./build-and-test-we…"   4 months ago        Up 47 minutes             8000/tcp                                      nitawebapp_webapp_1
 cfdc45177801        mariadb:10.4.12               "docker-entrypoint.s…"   4 months ago        Up 47 minutes             3306/tcp                                      nitawebapp_db_1
-922a4eb21e05        juniper/nita-jenkins:21.7-1   "/sbin/tini -- /usr/…"   4 months ago        Up 47 minutes (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
+922a4eb21e05        juniper/nita-jenkins:22.8-1   "/sbin/tini -- /usr/…"   4 months ago        Up 47 minutes (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
 $
 ```
 Here you can see the two persistent NITA containers (Jenkins and the Webapp) plus containers for the Nginx webserver and the Maria SQL database. 
@@ -50,16 +50,16 @@ If you read the nita-cmd documentation you will see that it is in fact just a wr
 ```shell
 $ nita-cmd containers ls
 CONTAINER ID        IMAGE                         CREATED             STATUS                    PORTS                                         NAMES
-34743b207365        juniper/nita-webapp:21.7-1    4 months ago        Up 43 minutes             8000/tcp                                      nitawebapp_webapp_1
-922a4eb21e05        juniper/nita-jenkins:21.7-1   4 months ago        Up 43 minutes (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
+34743b207365        juniper/nita-webapp:22.8-1    4 months ago        Up 43 minutes             8000/tcp                                      nitawebapp_webapp_1
+922a4eb21e05        juniper/nita-jenkins:22.8-1   4 months ago        Up 43 minutes (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
 $
 ```
 Here you can see the two persistent containers (Jenkins and Webapp) running. This command shows you some useful information, such as the image name and the container ID (that will be useful later, if you want to access them directly with ``docker``). If you need to find which versions of NITA container you have running, do the following:
 
 ```shell
 $ nita-cmd containers versions
-"/nitawebapp_webapp_1 juniper/nita-webapp:21.7-1"
-"/nitajenkins_jenkins_1 juniper/nita-jenkins:21.7-1"
+"/nitawebapp_webapp_1 juniper/nita-webapp:22.8-1"
+"/nitajenkins_jenkins_1 juniper/nita-jenkins:22.8-1"
 ```
 
 ### Other ``nita-cmd`` options
@@ -90,9 +90,9 @@ You can log into a NITA container by providing the ``cli`` argument to the appro
 
 | Command | Description |
 |---|---|
-| ``nita-cmd ansible cli 21.7`` | Start the Ansible container and log into its shell |
+| ``nita-cmd ansible cli 22.8`` | Start the Ansible container and log into its shell |
 | ``nita-cmd jenkins cli [ jenkins \| root ]`` | Log into the container shell as either the jenkins or root user |
-| ``nita-cmd robot cli 21.7`` | Start the robot container and log into its shell |
+| ``nita-cmd robot cli 22.8`` | Start the robot container and log into its shell |
 | ``nita-cmd webapp cli`` | Log into the webapp container shell |
 
 Note that because the Ansible and Robot containers are ephemeral, when you ``exit`` from the container's shell, the container itself will be stopped.
@@ -107,9 +107,9 @@ For example, if you want to log into the Maria DB container, first run ``docker 
 $ docker ps
 CONTAINER ID        IMAGE                         COMMAND                  CREATED             STATUS                 PORTS                                         NAMES
 906f4235bd96        nginx:1.17.9                  "nginx -g 'daemon of…"   4 months ago        Up 7 hours             80/tcp, 0.0.0.0:443->443/tcp                  nitawebapp_proxy_1
-34743b207365        juniper/nita-webapp:21.7-1    "./build-and-test-we…"   4 months ago        Up 7 hours             8000/tcp                                      nitawebapp_webapp_1
+34743b207365        juniper/nita-webapp:22.8-1    "./build-and-test-we…"   4 months ago        Up 7 hours             8000/tcp                                      nitawebapp_webapp_1
 cfdc45177801        mariadb:10.4.12               "docker-entrypoint.s…"   4 months ago        Up 7 hours             3306/tcp                                      nitawebapp_db_1
-922a4eb21e05        juniper/nita-jenkins:21.7-1   "/sbin/tini -- /usr/…"   4 months ago        Up 7 hours (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
+922a4eb21e05        juniper/nita-jenkins:22.8-1   "/sbin/tini -- /usr/…"   4 months ago        Up 7 hours (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
 $ docker exec -ti cfdc45177801 /bin/bash
 root@cfdc45177801:/#
 ```
@@ -120,11 +120,11 @@ The ``docker exec -ti`` command allows you to open an interactive session on the
 
 NITA uses two Docker containers for Ansible and Robot that are only started and stopped when needed (usually under the control of Jenkins). These containers are called ephemeral containers because of this behaviour. It is important to be aware that any information used by these containers during their execution is only temporary and is lost (or more accurately "reset") when they are stopped.
 
-With that said, you can start and run these containers (outside of the control of Jenkins) either by using the ``nita-cmd`` command as shown above, or by using the ``docker run`` command. In fact, the command ``nita-cmd ansible cli 21.7`` is actually just a wrapper for ``docker run`` like this:
+With that said, you can start and run these containers (outside of the control of Jenkins) either by using the ``nita-cmd`` command as shown above, or by using the ``docker run`` command. In fact, the command ``nita-cmd ansible cli 22.8`` is actually just a wrapper for ``docker run`` like this:
 
-``docker run -ti -u root -v /var/nita_project:/project:rw -v /var/nita_configs:/var/tmp/build:rw juniper/nita-ansible:21.7-1 /bin/bash``
+``docker run -ti -u root -v /var/nita_project:/project:rw -v /var/nita_configs:/var/tmp/build:rw juniper/nita-ansible:22.8-1 /bin/bash``
 
-This command will use the Ansible 21.7-1 Docker image to run a new instance of the container, if one is not already running. It will then open an interactive terminal in the container by running the bash shell. Note that this command mounts several volumes (using ``-v [host-dir:container-dir:access]``) which you should not change. Also note that only one instance of the Ansible and Robot ephemeral containers can be running at any one time - so if you run a new instance by using ``docker run``, be aware that a Jenkins job may fail if it also then tries to run its own instance. Capisce?
+This command will use the Ansible 22.8-1 Docker image to run a new instance of the container, if one is not already running. It will then open an interactive terminal in the container by running the bash shell. Note that this command mounts several volumes (using ``-v [host-dir:container-dir:access]``) which you should not change. Also note that only one instance of the Ansible and Robot ephemeral containers can be running at any one time - so if you run a new instance by using ``docker run``, be aware that a Jenkins job may fail if it also then tries to run its own instance. Capisce?
 
 ## The Jenkins Container
 
@@ -211,7 +211,7 @@ From here, you can run all kinds of SQL statements and queries... see the MariaD
 
 # VERSION
 
-This document is relevant for NITA version 21.7.
+This document is relevant for NITA version 22.8.
 
 # SEE ALSO
 
