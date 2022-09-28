@@ -1,12 +1,12 @@
-# NITA 21.7
+# NITA 22.8
 
-Welcome to NITA 21.7.
+Welcome to NITA 22.8.
 
 NITA is an open source platform for automating the building and testing of complex networks.
 
 # Release Notes
 
-For a list of new features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/21.7/README.md#217-new-features-and-bug-fixes).
+For a list of new features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/22.8/README.md#217-new-features-and-bug-fixes).
 
 # History
 
@@ -25,14 +25,14 @@ In a nutshell, NITA can be used as a toolbox from which you can automate the dep
 
 # Examples
 
-If you want to experiment to see what NITA can do, we currently have [2 example projects](https://github.com/Juniper/nita-webapp/tree/21.7/examples) that are provided in the webapp repository:
+If you want to experiment to see what NITA can do, we currently have [2 example projects](https://github.com/Juniper/nita-webapp/tree/22.8/examples) that are provided in the webapp repository:
 
-* Build and test an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita-webapp/tree/21.7/examples/evpn_vxlan_erb_dc)
+* Build and test an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita-webapp/tree/22.8/examples/evpn_vxlan_erb_dc)
 
     This includes all of the config that you need to build the data centre fabric and VXLAN overlay along with 14 example Robot tests for the firewalls, switches, BGP leaf and spine devices and end IP connectivity.
 We show integration with other operational tools for "Day 2 Management", storing inventory in Netbox and having that push changes to the network via the Juniper Paragon Insights product.
 
-* Build and test a [Simple DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita-webapp/tree/21.7/examples/ebgp_wan)
+* Build and test a [Simple DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita-webapp/tree/22.8/examples/ebgp_wan)
 
     This is between 2 example datacentres, with 13 example Robot tests for border leaf routers, DC spines and WAN PE devices, plus BGP and IP connectivity tests.
 
@@ -62,7 +62,7 @@ We hope that you enjoy using NITA, and if you do, please give the code a star on
 
 # Copyright
 
-Copyright 2021, Juniper Networks, Inc.
+Copyright 2022, Juniper Networks, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

@@ -22,7 +22,7 @@ Without any arguments, simply typing ``nita-cmd`` on its own will take you into 
 $ nita-cmd
 nita-cmd> help
 
-    nita-cmd ansible cli 21.7 => Starts an ansible container (version 21.7) command line shell interface in the /project directory.
+    nita-cmd ansible cli 22.8 => Starts an ansible container (version 22.8) command line shell interface in the /project directory.
     nita-cmd cli version => Shows NITA CLI current version.
     nita-cmd containers ls => Lists all running NITA containers.
     nita-cmd containers versions => Lists all running NITA containers versions.
@@ -149,7 +149,7 @@ To see which version of NITA you are running, type the command ``nita-cmd cli ve
 
 ```shell
 $ nita-cmd cli version
-nita-cli 21.7
+nita-cli 22.8
 $ 
 ```
 
