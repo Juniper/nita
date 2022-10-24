@@ -51,7 +51,6 @@ You have landed on the meta repository which links to all of the Juniper Network
 * https://github.com/Juniper/nita-ansible
 * https://github.com/Juniper/nita-jenkins
 * https://github.com/Juniper/nita-robot
-* https://github.com/Juniper/nita-cli
 * https://github.com/Juniper/nita-yaml-to-excel
 
 Please refer to the README in each submodule for more details.
