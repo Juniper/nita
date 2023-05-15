@@ -1,0 +1,58 @@
+# ********************************************************
+#
+# Project: nita-webapp
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+OS_version: 18.1R3-S5.3
+core_interfaces:
+- desc: '*** to dc1-leaf1 ***'
+  int: xe-0/0/2
+  ip: 10.30.145.1
+  mask: 30
+- desc: '*** to dc1-leaf2 ***'
+  int: xe-0/0/3
+  ip: 10.30.146.1
+  mask: 30
+- desc: '*** to dc1-leaf3 ***'
+  int: xe-0/0/4
+  ip: 10.30.147.1
+  mask: 30
+- desc: '*** to dc1-borderleaf1 ***'
+  int: xe-0/0/0
+  ip: 10.30.141.1
+  mask: 30
+- desc: '*** to dc1-borderleaf2 ***'
+  int: xe-0/0/1
+  ip: 10.30.142.1
+  mask: 30
+evpn_ibgp:
+- group: EVPN_iBGP
+  neighbors:
+  - name: 10.30.100.3
+loopback_ip: 10.30.100.4
+management_interface:
+  int: em0
+  ip: 100.123.24.5
+  mask: 16
+underlay_ebgp:
+- autonomous_system: 65502
+  group: IPCLOS_eBGP
+  neighbors:
+  - asn: '65503'
+    name: 10.30.145.2
+  - asn: '65504'
+    name: 10.30.146.2
+  - asn: '65505'
+    name: 10.30.147.2
+  - asn: '65506'
+    name: 10.30.141.2
+  - asn: '65507'
+    name: 10.30.142.2

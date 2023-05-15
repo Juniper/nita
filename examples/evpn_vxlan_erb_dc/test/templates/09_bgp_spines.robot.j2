@@ -1,0 +1,37 @@
+#jinja2:lstrip_blocks: True
+## ********************************************************
+##
+## Project: nita-webapp
+##
+## Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+##
+## Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+## Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+##
+## ********************************************************
+*** Settings ***
+Documentation     DC BGP Test cases
+
+Resource	${EXECDIR}/resource_files/resources.txt
+Resource	${JUNIPER_COMMON}/resource_files/device_resources.txt
+Resource	${JUNIPER_COMMON}/resource_files/show_cmd_keywords.txt
+
+Suite Setup	Device Open Connection	{{ inventory_hostname | replace("-","_") }}
+Suite Teardown	Device Close Connection	{{ inventory_hostname | replace("-","_") }}
+
+*** Variables ***
+
+${output_directory}=	${CURDIR}
+${path}=	${CURDIR}
+
+*** Keywords ***
+
+*** Test Cases ***
+T9.{{ inventory_hostname | replace("-","_") }}: BGP NEIGHBORS {{ inventory_hostname }}
+    [Documentation]	Objective: Check BGP is working on {{ inventory_hostname }}
+    [Tags]	BGP
+    Check BGP Neighbors	{{ inventory_hostname | replace("-","_") }}	{{ underlay_ebgp[0].neighbors|length * 2 + evpn_ibgp[0].neighbors|length }}
+

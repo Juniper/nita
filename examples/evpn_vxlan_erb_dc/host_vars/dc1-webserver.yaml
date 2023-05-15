@@ -1,0 +1,23 @@
+# ********************************************************
+#
+# Project: nita-webapp
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+bond_interface: bond0
+bond_ip: 10.1.1.100
+bond_netmask: 255.255.255.0
+management_interface:
+  int: ens3
+  ip: 100.123.20.2
+  mask: 16
+routing_options:
+- destination: 10.1.1.1
+  static: 10.0.0.0/8

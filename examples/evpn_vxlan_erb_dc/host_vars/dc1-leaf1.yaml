@@ -1,0 +1,70 @@
+# ********************************************************
+#
+# Project: nita-webapp
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+OS_version: 18.1R3-S5.3
+core_interfaces:
+- desc: '*** to dc1-spine1 ***'
+  int: xe-0/0/0
+  ip: 10.30.135.2
+  mask: 30
+- desc: '*** to dc1-spine2 ***'
+  int: xe-0/0/1
+  ip: 10.30.145.2
+  mask: 30
+evpn_port:
+- esi: 00:00:00:00:00:00:00:00:01:00
+  interface: ae0
+  lag_members:
+  - interface: xe-0/0/2
+  system_id: 00:00:00:00:01:00
+- esi: 00:00:00:00:00:00:00:00:01:00
+  interface: ae0
+  members:
+  - id: 1001
+  system_id: 00:00:00:00:01:00
+- esi: 00:00:00:00:00:00:00:00:02:00
+  interface: ae1
+  lag_members:
+  - interface: xe-0/0/3
+  system_id: 00:00:00:00:02:00
+- esi: 00:00:00:00:00:00:00:00:02:00
+  interface: ae1
+  members:
+  - id: 2001
+  system_id: 00:00:00:00:02:00
+loopback_ip: 10.30.100.5
+management_interface:
+  int: em0
+  ip: 100.123.24.6
+  mask: 16
+underlay_ebgp:
+- autonomous_system: 65503
+  group: IPCLOS_eBGP
+  neighbors:
+  - asn: '65501'
+    name: 10.30.135.1
+  - asn: '65502'
+    name: 10.30.145.1
+vrfs:
+- interfaces:
+  - name: irb.3001
+  loopback_ip: 10.40.100.13
+  vrf_id: 10003
+- interfaces:
+  - name: irb.1001
+  loopback_ip: 10.40.100.3
+  vrf_id: 10001
+- interfaces:
+  - name: irb.2001
+  loopback_ip: 10.40.100.8
+  vrf_id: 10002

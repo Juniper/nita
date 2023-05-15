@@ -1,0 +1,40 @@
+# ********************************************************
+#
+# Project: nita-webapp
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+- import_playbook: ../make_clean.yaml
+- import_playbook: ../make_etc_hosts.yaml
+
+- hosts: servers
+  tasks:
+    - name: Set ansible credentials
+      set_fact:
+        ansible_ssh_user: "{{ vm_user }}"
+        ansible_ssh_pass: "{{ vm_passwd }}"
+        ansible_ssh_private_key_file: ""
+    - name: Add bond network device config
+      template:
+        src: ifcfg-bond.j2
+        dest: "/etc/sysconfig/network-scripts/ifcfg-{{ bond_interface }}"
+    - name: Add slave nework device configs
+      template:
+        src: ifcfg-slave.j2
+        dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      with_items: [ eth1, eth2 ]
+    - name: Add routes
+      template:
+        src: route.j2
+        dest: "/etc/sysconfig/network-scripts/route-{{ bond_interface }}"
+    - name: Restart networking
+      shell: systemctl restart network
+      ignore_errors: yes
+

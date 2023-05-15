@@ -1,0 +1,38 @@
+# ********************************************************
+#
+# Project: nita-webapp
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+- import_playbook: ../make_clean.yaml
+- import_playbook: ../make_etc_hosts.yaml
+
+- hosts: routers
+  connection: local
+  vars:
+      ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Create shared resource file
+      run_once: true
+      template:
+        src: resources.txt.j2
+        dest: "resource_files/resources.txt"
+    - name: Create box tests
+      template:
+        src: 02_box_tests.robot.j2
+        dest: "tests/02_{{ inventory_hostname }}.robot"
+    - name: Create connectivity tests
+      template:
+        src: 04_connectivity.robot.j2
+        dest: "tests/04_{{ inventory_hostname }}.robot"
+    - name: Create bgp tests
+      template:
+        src: 09_bgp_routers.robot.j2
+        dest: "tests/09_{{ inventory_hostname }}.robot"

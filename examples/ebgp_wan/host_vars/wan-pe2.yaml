@@ -1,0 +1,29 @@
+---
+core_interfaces:
+- desc: '*** to dc1-borderleaf2 ***'
+  int: ge-0/0/2
+  ip: 10.32.12.2
+  mask: 30
+- desc: '*** to dc2-spine2 ***'
+  int: ge-0/0/1
+  ip: 10.32.2.2
+  mask: 30
+- desc: '*** to wan-pe1 ***'
+  int: ge-0/0/3
+  ip: 10.32.1.2
+  mask: 30
+loopback_ip: 10.52.100.2
+management_interface:
+  int: fxp0
+  ip: 100.123.1.1
+  mask: 16
+underlay_ebgp:
+- autonomous_system: 65401
+  group: IPCLOS_eBGP
+  neighbors:
+  - asn: 65400
+    name: 10.32.1.1
+  - asn: 65507
+    name: 10.32.12.1
+  - asn: 65521
+    name: 10.32.2.1

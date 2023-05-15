@@ -1,0 +1,100 @@
+# ********************************************************
+#
+# Project: nita-webapp
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+OS_version: 18.1R3-S5.3
+core_interfaces:
+- desc: '*** to dc1-spine1 ***'
+  int: xe-0/0/0
+  ip: 10.30.132.2
+  mask: 30
+- desc: '*** to dc1-spine2 ***'
+  int: xe-0/0/1
+  ip: 10.30.142.2
+  mask: 30
+- desc: '*** to wan-pe2 ***'
+  int: xe-0/0/4
+  ip: 10.32.12.1
+  mask: 30
+dci_ebgp:
+- group: WAN_OVERLAY_eBGP
+  neighbors:
+  - asn: '65201'
+    name: 10.30.100.8
+  - asn: '65201'
+    name: 10.30.100.9
+evpn_port:
+- interface: xe-0/0/2
+  ip: 10.97.1.1/30
+  vlan_id: 1
+- interface: xe-0/0/2
+  ip: 10.97.2.1/30
+  vlan_id: 2
+- interface: xe-0/0/2
+  ip: 10.97.3.1/30
+  vlan_id: 3
+- interface: xe-0/0/3
+  ip: 10.96.1.1/30
+  vlan_id: 1
+- interface: xe-0/0/3
+  ip: 10.96.2.1/30
+  vlan_id: 2
+- interface: xe-0/0/3
+  ip: 10.96.3.1/30
+  vlan_id: 3
+leaf_type: border
+loopback_ip: 10.30.100.2
+management_interface:
+  int: em0
+  ip: 100.123.24.3
+  mask: 16
+underlay_ebgp:
+- autonomous_system: 65507
+  group: IPCLOS_eBGP
+  neighbors:
+  - asn: '65501'
+    name: 10.30.132.1
+  - asn: '65502'
+    name: 10.30.142.1
+  - asn: '65401'
+    name: 10.32.12.2
+vrfs:
+- interfaces:
+  - name: xe-0/0/3.1
+  - name: xe-0/0/4.1
+  loopback_ip: 10.40.100.2
+  ospf_interfaces:
+  - metric: 100
+    name: xe-0/0/3.1
+  - metric: 200
+    name: xe-0/0/4.1
+  vrf_id: 10001
+- interfaces:
+  - name: xe-0/0/3.2
+  - name: xe-0/0/4.2
+  loopback_ip: 10.40.100.7
+  ospf_interfaces:
+  - metric: 100
+    name: xe-0/0/3.2
+  - metric: 200
+    name: xe-0/0/4.2
+  vrf_id: 10002
+- interfaces:
+  - name: xe-0/0/3.3
+  - name: xe-0/0/4.3
+  loopback_ip: 10.40.100.12
+  ospf_interfaces:
+  - metric: 100
+    name: xe-0/0/3.3
+  - metric: 200
+    name: xe-0/0/4.3
+  vrf_id: 10003

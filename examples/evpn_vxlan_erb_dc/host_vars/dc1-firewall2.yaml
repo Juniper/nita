@@ -1,0 +1,62 @@
+# ********************************************************
+#
+# Project: nita-webapp
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+OS_version: 18.2R3.4
+firewall_port:
+- description: '*** to dc1-borderleaf1 vlan 1 ***'
+  interface: ge-0/0/0
+  ip: 10.98.1.2/30
+  vlan_id: 1
+- description: '*** to dc1-borderleaf1 vlan 2 ***'
+  interface: ge-0/0/0
+  ip: 10.98.2.2/30
+  vlan_id: 2
+- description: '*** to dc1-borderleaf1 vlan 3 ***'
+  interface: ge-0/0/0
+  ip: 10.98.3.2/30
+  vlan_id: 3
+- description: '*** to dc1-borderleaf2 vlan 1 ***'
+  interface: ge-0/0/1
+  ip: 10.96.1.2/30
+  vlan_id: 1
+- description: '*** to dc1-borderleaf2 vlan 2 ***'
+  interface: ge-0/0/1
+  ip: 10.96.2.2/30
+  vlan_id: 2
+- description: '*** to dc1-borderleaf2 vlan 3 ***'
+  interface: ge-0/0/1
+  ip: 10.96.3.2/30
+  vlan_id: 3
+management_interface:
+  int: fxp0
+  ip: 100.123.26.2
+  mask: 16
+vrfs:
+- ospf_interfaces:
+  - name: ge-0/0/0.1
+  vrf_id: 10001
+- ospf_interfaces:
+  - name: ge-0/0/1.1
+  vrf_id: 10001
+- ospf_interfaces:
+  - name: ge-0/0/0.2
+  vrf_id: 10002
+- ospf_interfaces:
+  - name: ge-0/0/1.2
+  vrf_id: 10002
+- ospf_interfaces:
+  - name: ge-0/0/0.3
+  vrf_id: 10003
+- ospf_interfaces:
+  - name: ge-0/0/1.3
+  vrf_id: 10003
