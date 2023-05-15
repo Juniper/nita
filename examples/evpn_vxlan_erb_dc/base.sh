@@ -1,7 +1,7 @@
 #!/bin/bash
 # ********************************************************
 #
-# Project: nita-webapp
+# Project: nita
 #
 # Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
 #

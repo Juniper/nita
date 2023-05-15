@@ -4,7 +4,7 @@ Projects. What you need to know to create your own projects in NITA.
 
 # DESCRIPTION
 
-NITA ships with two example projects that we use to demonstrate its ability to automate the build and test processes for both an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita-webapp/tree/22.8/examples/evpn_vxlan_erb_dc) and a simple [DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita-webapp/tree/22.8/examples/ebgp_wan). However, what if we wanted to configure it to do something else? This document explains how to do just that.
+NITA ships with two example projects that we use to demonstrate its ability to automate the build and test processes for both an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc) and a simple [DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita/tree/main/examples/ebgp_wan). However, what if we wanted to configure it to do something else? This document explains how to do just that.
 
 # EXAMPLE
 
@@ -144,8 +144,8 @@ If the magic happens in ``project.yaml`` then it is the ``shell_command:`` state
 | Category | The ``shell_command`` Will |
 |---|---|
 | NOOB | Write YAML files, run a bash script (e.g. noob.sh) in an Ansible Docker container that runs an Ansible playbook |
-| BUILD | Write YAML files, run a bash script (e.g. [``build.sh``](https://github.com/Juniper/nita-webapp/blob/main/examples/evpn_vxlan_erb_dc/build.sh)) in an Ansible Docker container that runs an Ansible playbook |
-| TEST | Write YAML files, run a base script (e.g. [``test.sh``](https://github.com/Juniper/nita-webapp/blob/main/examples/evpn_vxlan_erb_dc/test.sh)) in a Robot Docker container that executes tests |
+| BUILD | Write YAML files, run a bash script (e.g. [``build.sh``](https://github.com/Juniper/nita/blob/main/examples/evpn_vxlan_erb_dc/build.sh)) in an Ansible Docker container that runs an Ansible playbook |
+| TEST | Write YAML files, run a base script (e.g. [``test.sh``](https://github.com/Juniper/nita/blob/main/examples/evpn_vxlan_erb_dc/test.sh)) in a Robot Docker container that executes tests |
 
 ### Ingredients You Need
 
