@@ -4,13 +4,13 @@ Projects. What you need to know to create your own projects in NITA.
 
 # DESCRIPTION
 
-NITA ships with two example projects that we use to demonstrate its ability to automate the build and test processes for both an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita-webapp/tree/22.8/examples/evpn_vxlan_erb_dc) and a simple [DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita-webapp/tree/22.8/examples/ebgp_wan). However, what if we wanted to configure it to do something else? This document explains how to do just that.
+NITA ships with two example projects that we use to demonstrate its ability to automate the build and test processes for both an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc) and a simple [DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita/tree/main/examples/ebgp_wan). However, what if we wanted to configure it to do something else? This document explains how to do just that.
 
 # EXAMPLE
 
 ## Start With the Device Inventory
 
-Let's use the same [EVPN VXLAN example from the NITA webapp repo](https://github.com/Juniper/nita-webapp/tree/main/examples/evpn_vxlan_erb_dc), where we had already defined two data centres, ``dc1`` and ``dc2``. For simplicity, let's assume that we want to configure the spine devices in those two data centres, which we will place into two groups with those names. The groups are also Ansible roles, and will help us when instructing Ansible as to what devices to work on. We can write this down as an Ansible inventory using the Ansible [INI](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html) format, like this:
+Let's use the same [EVPN VXLAN example from the NITA webapp repo](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc), where we had already defined two data centres, ``dc1`` and ``dc2``. For simplicity, let's assume that we want to configure the spine devices in those two data centres, which we will place into two groups with those names. The groups are also Ansible roles, and will help us when instructing Ansible as to what devices to work on. We can write this down as an Ansible inventory using the Ansible [INI](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html) format, like this:
 
 ```shell
 [all:children]
@@ -37,7 +37,7 @@ Now let's think about the configurations needed for each device and let's standa
 If we were using the Junos CLI, the commands to enter would look something like this:
 
 ```shell
-dc1-spine1# set system syslog host 100.123.0.17 any warning 
+dc1-spine1# set system syslog host 100.123.0.17 any warning
 dc1-spine1# set system syslog host 100.123.0.17 daemon info
 ```
 
@@ -53,7 +53,7 @@ host 100.123.0.17 {
 Now we need to create a [Jinja2 template](https://jinja.palletsprojects.com) that can render this configuration snippet using inventory data that will be provided by NITA. For this example, we will use the following template:
 
 ```jinja
-{# Template for Junos syslog configuration #} 
+{# Template for Junos syslog configuration #}
 
 system {
   syslog {
@@ -115,7 +115,7 @@ You upload your project data to the NITA Webapp as a zip file, which contains al
 
 ### Standard Files
 
-To begin with, there are some standard files that we recommend go into every project zip file and rather than reinvent the wheel, we recommend that you download them from either the [EVPN VXLAN](https://github.com/Juniper/nita-webapp/tree/main/examples/evpn_vxlan_erb_dc) or [eBGP WAN](https://github.com/Juniper/nita-webapp/tree/main/examples/ebgp_wan) examples. Here is a breakdown of what you will need to put into your zip file. These files will need to go into the root (i.e. top-most) folder of your zip file:
+To begin with, there are some standard files that we recommend go into every project zip file and rather than reinvent the wheel, we recommend that you download them from either the [EVPN VXLAN](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc) or [eBGP WAN](https://github.com/Juniper/nita/tree/main/examples/ebgp_wan) examples. Here is a breakdown of what you will need to put into your zip file. These files will need to go into the root (i.e. top-most) folder of your zip file:
 
 | File | Purpose |
 |---|---|
@@ -144,8 +144,8 @@ If the magic happens in ``project.yaml`` then it is the ``shell_command:`` state
 | Category | The ``shell_command`` Will |
 |---|---|
 | NOOB | Write YAML files, run a bash script (e.g. noob.sh) in an Ansible Docker container that runs an Ansible playbook |
-| BUILD | Write YAML files, run a bash script (e.g. [``build.sh``](https://github.com/Juniper/nita-webapp/blob/main/examples/evpn_vxlan_erb_dc/build.sh)) in an Ansible Docker container that runs an Ansible playbook |
-| TEST | Write YAML files, run a base script (e.g. [``test.sh``](https://github.com/Juniper/nita-webapp/blob/main/examples/evpn_vxlan_erb_dc/test.sh)) in a Robot Docker container that executes tests |
+| BUILD | Write YAML files, run a bash script (e.g. [``build.sh``](https://github.com/Juniper/nita/blob/main/examples/evpn_vxlan_erb_dc/build.sh)) in an Ansible Docker container that runs an Ansible playbook |
+| TEST | Write YAML files, run a base script (e.g. [``test.sh``](https://github.com/Juniper/nita/blob/main/examples/evpn_vxlan_erb_dc/test.sh)) in a Robot Docker container that executes tests |
 
 ### Ingredients You Need
 
@@ -178,11 +178,11 @@ In our Syslog example, the Ansible playbook could look like this:
 
 And be saved as the file ``build/sites.yaml``.
 
-And that is about it. Take a good look at the [EVPN VXLAN example](https://github.com/Juniper/nita-webapp/tree/main/examples/evpn_vxlan_erb_dc) that we provide in the Webapp GitHub repo to see how to do it.
+And that is about it. Take a good look at the [EVPN VXLAN example](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc) that we provide in the Webapp GitHub repo to see how to do it.
 
 ## Automating Tests
 
-We've looked at how NITA can be used to automate the deployment of device configurations by using Ansible, now lets look at how we can add automated tests to verify that the deployments worked. NITA uses Robot Framework to execute tests which can use libraries such as ``pybot`` or our modified version ``pybot_jrouter`` and this gives a huge amount of flexibility for creating automated tests. 
+We've looked at how NITA can be used to automate the deployment of device configurations by using Ansible, now lets look at how we can add automated tests to verify that the deployments worked. NITA uses Robot Framework to execute tests which can use libraries such as ``pybot`` or our modified version ``pybot_jrouter`` and this gives a huge amount of flexibility for creating automated tests.
 
 ### Manually Testing Syslog
 
@@ -204,7 +204,7 @@ input(type="imudp" port="514")
 Now pick a device, such as ``dc1-spine2`` and log into it. The easiest way to test the configuration that you have just deployed is to jump down from the Junos CLI into the system shell and generate a spoof message with the ``logger`` command. Make sure it uses a priority level that will allow Junos to forward it to your loghost, such as this:
 
 ```shell
-jcluser@dc1-spine2> start shell 
+jcluser@dc1-spine2> start shell
 % logger -p daemon.warning "this is a test"
 % exit
 ```
@@ -212,7 +212,7 @@ jcluser@dc1-spine2> start shell
 You can check that Junos generated the message correctly by looking at the local log file on the same device:
 
 ```shell
-jcluser@dc1-spine2> show log messages | match test      
+jcluser@dc1-spine2> show log messages | match test
 Feb 10 09:26:58  dc1-spine2 jcluser: this is a test
 ```
 

@@ -1,0 +1,6 @@
+*.html
+output.xml
+sites.retry
+resource_files/resources.txt
+tests/02_*
+tests/04_*
