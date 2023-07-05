@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>	
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:u="/util">
+    <j:if test="${!it.allFailedCases.isEmpty()}">
+        <style>
+            td.pane {
+                vertical-align: top;
+            }
+        </style>
+        <h2>Failed Test Cases</h2>
+	<p>Upload OpenAI Key: <input type="file" id="file-input"/></p>
+        <table class="pane sortable">
+            <tr>
+                <td class="pane-header" title="Test case name. Click to sort.">Name</td>
+                <td class="pane-header" style="text-align:center !important;" title="Criticality. Click to sort.">Crit.</td>
+                <td class="pane-header" title="Duration. Click to sort.">Duration</td>
+                <td class="pane-header" style="text-align:center;" title="Number of failed builds. Click to sort.">Age</td>
+                <td class="pane-header" style="text-align:center;" title="Action">Action</td>
+            </tr>
+            <j:forEach var="case" items="${it.allFailedCases}">
+                <j:set var="fullName" value="${case.getRelativePackageName(it)}" />
+                <tr>
+                    <td class="pane">
+                        <a id="${h.escape(fullName)}-showlink" href="javascript:showStackTrace('${h.jsStringEscape(h.escape(fullName))}','${h.jsStringEscape(case.getRelativeId(it))}/summary')" class="expand"></a>
+                        <a id="${h.escape(fullName)}-hidelink" style="display:none" href="javascript:hideStackTrace('${h.jsStringEscape(h.escape(fullName))}')" class="collapse"></a>
+                        <st:nbsp/>
+                        <a href="${case.getRelativeId(it)}"><small>${case.getRelativeParent(it)}</small>${case.name}</a>
+                        <div id="${h.escape(fullName)}" class="hidden" style="display:none">
+                            ${%Loading...}
+                        </div>
+                    </td>
+                    <td class="pane" style="text-align:center;"><j:if test="${case.isCritical()}">yes</j:if><j:if test="${!case.isCritical()}">no</j:if></td>
+                    <td class="pane">${case.humanReadableDuration}</td>
+                    <td class="pane" style="text-align:center;"><a href="${rootURL}/${case.failedSinceRun.url}">${case.age}</a></td>
+		    <td class="pane" style="text-align:center;"><a href="#" onclick="javascript:sendRequestToChatGPT(&quot;${case.name}&quot;)">Ask ChatGPT</a></td>
+                </tr>
+            </j:forEach>
+        </table>
+	<script src="${rootURL}/userContent/js/readfile.js"></script>
+	<script src="${rootURL}/userContent/js/openai.js"></script>
+    </j:if>
+</j:jelly>
