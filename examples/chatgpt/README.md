@@ -1,6 +1,14 @@
 # ChatGPT Integration with Robot via Jenkins
 
-This example enhancement uses ChatGPT to help you figure out why certain test cases might have failed and what you can do to fix them. Follow the steps described in this README to install the files necessary to make this work...
+This example enhancement to NITA uses ChatGPT to help you figure out why certain test cases might have failed and what you can do to fix them. This can be incredibly useful for level 1 network operations staff, who might need an artificial assistant to help them investigate why a test might have failed. Note that you (or whoever runs the query) will need [an account with OpenAI](https://platform.openai.com/signup?launch) for all of this to work.
+
+## Overview
+
+What we will do is modify the results page of Robot tests which Jenkins serves to us. Jenkins will summarise the failed test results at the top of the page, so all we need to do is add a way to pass the test case description to ChatGPT. For this to work we need to add two new artifacts to the Jenkins UI, one is a button that we can use to upload an API key (for OpenAI) and the other is a hyperlink that we can use to trigger a call to ChatGPT. These two new artifacts will make the results page look like this:
+
+![New artifacts on the Robot results page](images/img1.JPG)
+
+Follow the steps described in this README to install and edit the files necessary to make this work...
 
 ## Step 1: The Robot Plugin Jar File
 
@@ -10,7 +18,7 @@ You'll need to edit the Robot Java Archive ("jar") file to change one of the jel
 
 From the NITA host machine, you'll need to work inside the Jenkins container as the root user, like this:
 
-```
+```shell
 $ nita-cmd jenkins cli root
 # cd /var/jenkins_home/plugins/robot/WEB-INF/lib
 # cp robot.jar robot.jar.original
@@ -18,7 +26,7 @@ $ nita-cmd jenkins cli root
 
 Should things go wrong, you can always rollback to that. Now continue by extracting the jar file:
 
-```
+```shell
 # cp robot.jar ~
 # cd
 # jar xf robot.jar
@@ -28,7 +36,7 @@ This will extract three things, a file called `index.jelly`, a directory called 
 
 ### Edit the failedCases template
 
-Edit the file `hudson/plugins/robot/util/failedCases.jelly` and make the following changes:
+Edit the file ``hudson/plugins/robot/util/failedCases.jelly`` and make the following changes:
 
 Just below the `<h2>` heading, add a line that will input (read) a file into the name `file-input`, with a line like this:
 
@@ -95,6 +103,7 @@ ry')" class="expand"></a>
     </j:if>
 </j:jelly>
 ```
+There is an example ![failedCases.jelly](failedCases.jelly) file in this repo, should you want to use it.
 
 ### Create a new Jar File
 
@@ -115,12 +124,11 @@ Jenkins was hardened several years ago to prevent people making malicious change
 ```
 java_opts_array+=( "-Dhudson.remoting.ClassFilter=hudson.plugins.robot.model.RobotSuiteResult,hudson.plugins.robot.model.RobotCaseResult,hudson.plugins.robot.util.failedCases,hudson.plugins.robot.model.RobotResult,hudson.plugins.robot.RobotBuildAction")
 ```
-
-Add this new line just below the "fi" closing if-statement on line 26.
+Add this new line just below the "fi" closing if-statement on line 26. There is an example ![jenkins.sh](jenkins.sh) file in this repo, if you wish to use it.
 
 ## Step 3: Copy Example JavaScript Files
 
-Copy the example JavaScript files provided in this repository to the `/var/jenkins_home/userContent` directory in the jenkins container, as the jenkins user:
+Copy the example JavaScript files provided in this repository (![readfile.js](js/readfile.js) and ![openai.js](js/openai.js)) to the `/var/jenkins_home/userContent` directory in the jenkins container, as the jenkins user:
 
 ```
 $ nita-cmd jenkins cli jenkins
@@ -129,7 +137,7 @@ $ mv /project/openai.js /var/jenkins_home/userContent/js
 $ mv /project/readfile.js /var/jenkins_home/userContent/js
 ```
 
-You can either use the example Javascript files provided, or create your own, but they must go in the directory `/var/jenkins_home/userContent/js` that matches the `<script src>` lines that you added to the jelly file above.
+You can either use the example Javascript files provided, or create your own, but they must go in the directory `/var/jenkins_home/userContent/js` that matches the `<script src>` lines that you added to the jelly file above. Note that the ![openai.js](js/openai.js) script permits a maximum of 400 tokens to be used in the exchange with ChatGPT. Tokens are the currency used by the OpenAI API which you need to pay for - if you don't know what a token is, or how much it costs, check out the latest [OpenAI pricing page](https://openai.com/pricing).
 
 ## Step 4: Restart Jenkins
 
@@ -149,4 +157,8 @@ Check for errors in the log as you access a page such as `https://<jenkins>:<por
 "OPENAI_API_KEY": "sk-xxxxxxxxxxxxxx"
 }
 ```
-The "xxxx" should be replaced with your actual OpenAI API key. Then simply click on an "Ask ChatGPT" link alongside any particular failed test case that you want help with. Expect a delay of between 5-10 seconds whilst ChatGPT does its thing, and then a window will appear with some helpful suggestions.  And if nothing appears to be working, press `F12` in your browser to review the console output.
+The "xxxx" should be replaced with your actual OpenAI API key (there is an example ![key.json](key.json) file in this repo, which you can use as a template to edit). Then simply click on an "Ask ChatGPT" link alongside any particular failed test case that you want help with. Expect a delay of between 5-10 seconds whilst ChatGPT does its thing, and then a window will appear with some helpful suggestions, a bit like this:
+
+![Example output image](images/img2.JPG)
+
+And if nothing appears to be working, press `F12` in your browser to review the console output.
