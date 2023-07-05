@@ -1,6 +1,6 @@
 # ChatGPT Integration with Robot via Jenkins
 
-This example enhancement to NITA uses ChatGPT to help you figure out why certain test cases might have failed and what you can do to fix them. This can be incredibly useful for level 1 network operations staff, who might need an artificial assistant to help them investigate why a test might have failed. Note that you (or whoever runs the query) will need [an account with OpenAI](https://platform.openai.com/signup?launch) for all of this to work.
+This example enhancement to NITA uses ChatGPT to help you figure out why certain test cases might have failed and what you can do to fix them. This can be incredibly useful for level 1 network operations staff, who might need an artificial assistant to help them investigate why a test may have failed. Note that you (or whoever runs the query) will need [an account with OpenAI](https://platform.openai.com/signup?launch) for all of this to work.
 
 ## Overview
 
@@ -24,7 +24,7 @@ $ nita-cmd jenkins cli root
 # cp robot.jar robot.jar.original
 ```
 
-Should things go wrong, you can always rollback to that. Now continue by extracting the jar file:
+:warning: Should things go wrong, you can always rollback to that. Now continue by extracting the jar file:
 
 ```shell
 # cp robot.jar ~
@@ -128,7 +128,11 @@ Add this new line just below the "fi" closing if-statement on line 26. There is 
 
 ## Step 3: Copy Example JavaScript Files
 
-Copy the example JavaScript files provided in this repository (![readfile.js](js/readfile.js) and ![openai.js](js/openai.js)) to the `/var/jenkins_home/userContent` directory in the jenkins container, as the jenkins user:
+Download the example JavaScript files provided in this repository (![readfile.js](js/readfile.js) and ![openai.js](js/openai.js)) and save them on the NITA host machine.
+
+:bulb: Pro-Tip: The directory `/var/nita_project` on the host maps to `/project` in the Jenkins container, making it easy to move files between the host and the container.
+
+Now all you need to do is create a directory `/var/jenkins_home/userContent/js` in the jenkins container, as the jenkins user, and copy them across. Like this:
 
 ```
 $ nita-cmd jenkins cli jenkins
@@ -137,11 +141,13 @@ $ mv /project/openai.js /var/jenkins_home/userContent/js
 $ mv /project/readfile.js /var/jenkins_home/userContent/js
 ```
 
-You can either use the example Javascript files provided, or create your own, but they must go in the directory `/var/jenkins_home/userContent/js` that matches the `<script src>` lines that you added to the jelly file above. Note that the ![openai.js](js/openai.js) script permits a maximum of 400 tokens to be used in the exchange with ChatGPT. Tokens are the currency used by the OpenAI API which you need to pay for - if you don't know what a token is, or how much it costs, check out the latest [OpenAI pricing page](https://openai.com/pricing).
+You can either use the example Javascript files provided, or create your own, but they must go in the directory `/var/jenkins_home/userContent/js` that matches the `<script src>` lines that you added to the jelly file above.
+
+:warning: Note that the ![openai.js](js/openai.js) script permits a maximum of 400 tokens to be used in the exchange with ChatGPT. Tokens are the currency used by the OpenAI API which you need to pay for - if you don't know what a token is, or how much it costs, check out the latest [OpenAI pricing page](https://openai.com/pricing).
 
 ## Step 4: Restart Jenkins
 
-That's it, there are no more changes to make. From the nita host:
+That's it, there are no more changes to make. From the nita host just restart the Jenkins container:
 
 ```
 $ nita-cmd jenkins restart
@@ -161,4 +167,4 @@ The "xxxx" should be replaced with your actual OpenAI API key (there is an examp
 
 ![Example output image](images/img2.JPG)
 
-And if nothing appears to be working, press `F12` in your browser to review the console output.
+And if nothing appears to be working, press `F12` in your browser to review the console output. Otherwise kick back, relax and admire your work. Well done!
