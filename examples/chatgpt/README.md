@@ -143,7 +143,7 @@ $ mv /project/readfile.js /var/jenkins_home/userContent/js
 
 You can either use the example Javascript files provided, or create your own, but they must go in the directory `/var/jenkins_home/userContent/js` that matches the `<script src>` lines that you added to the jelly file above.
 
-:warning: Note that the ![openai.js](js/openai.js) script permits a maximum of 400 tokens to be used in the exchange with ChatGPT. Tokens are the currency used by the OpenAI API which you need to pay for - if you don't know what a token is, or how much it costs, check out the latest [OpenAI pricing page](https://openai.com/pricing).
+:warning: Note that the ![openai.js](js/openai.js) script permits a maximum of 400 tokens to be used in the exchange with ChatGPT, but you might want to adjust this to suite your needs and budget. Tokens are the currency used by the OpenAI API which you need to pay for - if you don't know what a token is, or how much it costs, check out the latest [OpenAI pricing page](https://openai.com/pricing).
 
 ## Step 4: Restart Jenkins
 
