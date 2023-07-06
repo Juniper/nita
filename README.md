@@ -25,7 +25,11 @@ In a nutshell, NITA can be used as a toolbox from which you can automate the dep
 
 # Examples
 
-If you want to experiment to see what NITA can do, we currently have [2 example projects](https://github.com/Juniper/nita/tree/main/examples) that are provided in the webapp repository:
+If you want to experiment to see what NITA can do, we currently have [3 example projects](https://github.com/Juniper/nita/tree/main/examples) that are provided in this repository:
+
+* [ChatGPT Integration with Robot and Jenkins](https://github.com/Juniper/nita/tree/main/examples/chatgpt).
+
+    Ever needed help investigating why an automated test has failed? This example will send failed test case descriptions to ChatGPT and ask for the top suggestions on how to solve them. All of a sudden, you will look like a genius!
 
 * Build and test an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc)
 
