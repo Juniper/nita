@@ -115,16 +115,15 @@ Next, create a new jar file that includes your changed file, and put it back in 
 # jar cf robot.jar index.jelly META-INF/ hudson/
 # cp robot.jar /var/jenkins_home/plugins/robot/WEB-INF/lib
 # chown jenkins:jenkins /var/jenkins_home/plugins/robot/WEB-INF/lib/robot.jar
-# exit
 ```
 ## Step 2: Edit the Jenkins Start Script
 
-Jenkins was hardened several years ago to prevent people making malicious changes to it (see https://www.jenkins.io/redirect/class-filter/ for details), and so without adding specific classes to a whitelist your changes will be rejected when Jenkins next runs. You need to provide a whitelist of Robot classes as options to the Java executable, by adding the following line to the startup script `/usr/local/bin/jenkins.sh` thus:
+Jenkins was hardened several years ago to prevent people making malicious changes to it (see https://www.jenkins.io/redirect/class-filter/ for details), and so without adding specific classes to a whitelist your changes will be rejected when Jenkins next runs. You need to provide a whitelist of Robot classes as options to the Java executable, by adding the following line to the startup script `/usr/local/bin/jenkins.sh` that lives in the Jenkins container, like this:
 
 ```
 java_opts_array+=( "-Dhudson.remoting.ClassFilter=hudson.plugins.robot.model.RobotSuiteResult,hudson.plugins.robot.model.RobotCaseResult,hudson.plugins.robot.util.failedCases,hudson.plugins.robot.model.RobotResult,hudson.plugins.robot.RobotBuildAction")
 ```
-Add this new line just below the "fi" closing if-statement on line 26. There is an example ![jenkins.sh](jenkins.sh) file in this repo, if you wish to use it.
+Add this new line just below the "fi" closing if-statement on line 26. There is an example ![jenkins.sh](jenkins.sh) file in this repo, if you wish to use it. Now you can `exit` from the Jenkins container.
 
 ## Step 3: Copy Example JavaScript Files
 
