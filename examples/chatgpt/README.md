@@ -127,17 +127,19 @@ Add this new line just below the "fi" closing if-statement on line 26. There is 
 
 ## Step 3: Copy Example JavaScript Files
 
-Download the example JavaScript files provided in this repository (![readfile.js](js/readfile.js) and ![openai.js](js/openai.js)) and save them on the NITA host machine.
-
 :bulb: Pro-Tip: The directory `/var/nita_project` on the host maps to `/project` in the Jenkins container, making it easy to move files between the host and the container.
 
-Now all you need to do is create a directory `/var/jenkins_home/userContent/js` in the jenkins container, as the jenkins user, and copy them across. Like this:
+Download the example JavaScript files provided in this repository (![readfile.js](js/readfile.js) and ![openai.js](js/openai.js)) and save them on the NITA host machine in the `/var/nita_project` directory. Then, in the Jenkins container, create a directory `/var/jenkins_home/userContent/js` and copy them across. Like this:
 
 ```
+$ cd /var/nita_project
+$ wget https://raw.githubusercontent.com/Juniper/nita/main/examples/chatgpt/js/openai.js
+$ wget https://raw.githubusercontent.com/Juniper/nita/main/examples/chatgpt/js/readfile.js
 $ nita-cmd jenkins cli jenkins
 $ mkdir /var/jenkins_home/userContent/js
 $ mv /project/openai.js /var/jenkins_home/userContent/js
 $ mv /project/readfile.js /var/jenkins_home/userContent/js
+$ exit
 ```
 
 You can either use the example Javascript files provided, or create your own, but they must go in the directory `/var/jenkins_home/userContent/js` that matches the `<script src>` lines that you added to the jelly file above.
