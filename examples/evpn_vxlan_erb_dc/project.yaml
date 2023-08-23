@@ -19,28 +19,28 @@ action:
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash build.sh ${build_dir}"'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s_build.py; kubectl apply -f nita-ansible-job-build.yaml; sleep 2; kubectl logs job/nita-ansible'
 
   - name: Build server interfaces
     jenkins_url: build_server_interfaces
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash configure_bms.sh ${build_dir}"'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s_cfg_bms.py; kubectl apply -f nita-ansible-cfg-bms.yaml; sleep 2; kubectl logs job/nita-ansible'
 
   - name: Build base config
     jenkins_url: base_qfx_fabric
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash base.sh ${build_dir}"'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s_base.py; kubectl apply -f nita-ansible-job-base.yaml; sleep 2; kubectl logs job/nita-ansible'
 
   - name: Dump configuration
     jenkins_url: dump_qfx_fabric
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash dump.sh ${build_dir}"'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s_dump.py; kubectl apply -f nita-ansible-job-dump.yaml; sleep 2; kubectl logs job/nita-ansible'
 
   - name: Test
     jenkins_url: test_qfx_fabric
@@ -51,16 +51,4 @@ action:
       write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name robot -e ROBOT_OPTIONS="-d ${PWD}/test/outputs" juniper/nita-robot:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash test.sh"'
       output_path: test/outputs/
 
-  - name: Netbox Population
-    jenkins_url: netbox_population
-    #must be one of NOOB, BUILD or TEST
-    category: BUILD
-    configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash netbox.sh ${build_dir}"'
-
-  - name: HealthBot Population
-    jenkins_url: healthbot_population
-    #must be one of NOOB, BUILD or TEST
-    category: BUILD
-    configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash healthbot.sh ${build_dir}"'
+ 
