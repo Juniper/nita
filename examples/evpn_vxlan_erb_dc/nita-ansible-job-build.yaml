@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nita-ansible
+spec:
+  template:
+    spec:
+      serviceAccountName: internal-jenknis-pod
+      containers:
+      - name: nita-ansible
+        image: juniper/nita-ansible:22.8-1
+        workingDir: /blabla
+        command: ["/bin/bash"]
+        args: ["-c", "bash build.sh", "/tmp"]
+        volumeMounts:
+        - name: default
+          mountPath: /project/
+      volumes:
+      - name: default
+        hostPath:
+          type: DirectoryOrCreate
+          path: /var/nita_project
+      restartPolicy: Never
