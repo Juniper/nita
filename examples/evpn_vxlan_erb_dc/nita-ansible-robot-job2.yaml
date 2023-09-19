@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nita-ansible-robot-2
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      serviceAccountName: internal-jenknis-pod
+      containers:
+      - name: nita-robot
+        image: juniper/nita-robot:22.8-1
+        workingDir: /project/evpn_vxlan_erb_dc_1.3-vxlan/test
+        command: ["/bin/bash"]
+        args: ["-c", "robot -C ansi -L TRACE /project/evpn_vxlan_erb_dc_1.3-vxlan/test/tests"]
+        env:
+        - name: ROBOT_OPTIONS
+          value: "-d /project/evpn_vxlan_erb_dc_1.3-vxlan/test/outputs"
+        volumeMounts:
+        - name: default
+          mountPath: /project/
+      volumes:
+      - name: default
+        hostPath:
+          path: /var/nita_project
+      restartPolicy: Never
