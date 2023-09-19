@@ -26,3 +26,18 @@ fi
 ansible-playbook -i hosts test/sites.yaml  --extra-vars "build_dir=$build_dir"
 touch $build_dir/ansible-run.log
 sudo chmod 664 $build_dir/ansible-run.log
+
+umask 0002
+mkdir -p test/outputs
+mkdir -p test/resource_files/tmp
+touch test/outputs/output.xml
+touch test/outputs/log.html
+touch test/outputs/report.html
+
+#export PYTHONPATH=libraries
+
+#(cd test && robot -C ansi -L TRACE tests/)
+
+chmod -R 777 test/tests
+chmod -R 777 test/resource_files/tmp
+chmod -R 777 test/outputs
