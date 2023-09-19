@@ -1,8 +1,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: nita-ansible
+  name: nita-ansible-build
 spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 120 
   template:
     spec:
       serviceAccountName: internal-jenknis-pod
