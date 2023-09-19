@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nita-ansible-robot-1
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      serviceAccountName: internal-jenknis-pod
+      containers:
+      - name: nita-ansible
+        image: juniper/nita-ansible:22.8-1
+        workingDir: /project/evpn_vxlan_erb_dc_1.3-vxlan
+        command: ["/bin/bash"]
+        args: ["-c", "bash test_setup.sh", "/tmp"]
+        volumeMounts:
+        - name: default
+          mountPath: /project/
+      volumes:
+      - name: default
+        hostPath:
+          path: /var/nita_project
+      restartPolicy: Never
