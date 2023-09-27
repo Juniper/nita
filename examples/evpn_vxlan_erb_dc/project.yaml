@@ -1,0 +1,53 @@
+# ********************************************************
+#
+# Project: nita
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+description: EVPN VLXAN ERB Data Center
+name: evpn_vxlan_erb_dc_1.3
+action:
+  - name: Build
+    jenkins_url: build_qfx_fabric
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py build juniper/nita-ansible:22.8-1; kubectl apply -f build.yaml; sleep 10; kubectl logs job/build -f'
+
+  - name: Build server interfaces
+    jenkins_url: build_server_interfaces
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s_cfg_bms.py; kubectl apply -f nita-ansible-cfg-bms.yaml; sleep 10; kubectl logs job/nita-ansible -f'
+
+  - name: Build base config
+    jenkins_url: base_qfx_fabric
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py base juniper/nita-ansible:22.8-1; kubectl apply -f base.yaml; sleep 10; kubectl logs job/base -f'
+
+  - name: Dump configuration
+    jenkins_url: dump_qfx_fabric
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s_dump.py; kubectl apply -f nita-ansible-job-dump.yaml; sleep 10; kubectl logs job/nita-ansible -f'
+
+  - name: Test
+    jenkins_url: test_qfx_fabric
+    #must be one of NOOB, BUILD or TEST
+    category: TEST
+    configuration:
+      shell_command: 'write_yaml_files.py; python3 robot.py job-ansible juniper/nita-ansible:22.8-1 job-robot juniper/nita-robot:22.8-1; kubectl apply -f job-ansible.yaml; sleep 10; kubectl logs job/job-ansible -f; kubectl apply -f job-robot.yaml; sleep 10; kubectl logs job/job-robot -f'
+      output_path: test/outputs
+
+ 
