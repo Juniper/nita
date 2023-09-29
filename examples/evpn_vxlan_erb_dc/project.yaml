@@ -19,7 +19,7 @@ action:
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py build juniper/nita-ansible:22.8-1; kubectl apply -f build.yaml; sleep 10; kubectl logs job/build -f'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py build juniper/nita-ansible:22.8-1; kubectl apply -f build.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/build; kubectl logs job/build -f'
 
   - name: Build server interfaces
     jenkins_url: build_server_interfaces
@@ -33,7 +33,7 @@ action:
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py base juniper/nita-ansible:22.8-1; kubectl apply -f base.yaml; sleep 10; kubectl logs job/base -f'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py base juniper/nita-ansible:22.8-1; kubectl apply -f base.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/base; kubectl logs job/base -f'
 
   - name: Dump configuration
     jenkins_url: dump_qfx_fabric
@@ -47,7 +47,5 @@ action:
     #must be one of NOOB, BUILD or TEST
     category: TEST
     configuration:
-      shell_command: 'write_yaml_files.py; python3 robot.py job-ansible juniper/nita-ansible:22.8-1 job-robot juniper/nita-robot:22.8-1; kubectl apply -f job-ansible.yaml; sleep 10; kubectl logs job/job-ansible -f; kubectl apply -f job-robot.yaml; sleep 10; kubectl logs job/job-robot -f'
+      shell_command: 'write_yaml_files.py; python3 robot.py job-ansible juniper/nita-ansible:22.8-1 job-robot juniper/nita-robot:22.8-1; kubectl apply -f job-ansible.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/job-ansible; kubectl logs job/job-ansible -f; kubectl apply -f job-robot.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/job-robot; kubectl logs job/job-robot -f'
       output_path: test/outputs
-
- 
