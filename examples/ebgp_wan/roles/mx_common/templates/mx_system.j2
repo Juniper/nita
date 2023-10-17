@@ -1,0 +1,62 @@
+system {
+    host-name {{ inventory_hostname }};
+    root-authentication {
+        encrypted-password "{{ password_hashes.root_user }}"; ## SECRET-DATA
+    }
+    scripts {
+        language python;
+    }
+    login {
+        message "{{ login_message }}";
+        user jcluser {
+            uid 2000;
+            class super-user;
+            authentication {
+                encrypted-password "{{ password_hashes.netadmin_user }}"; ## SECRET-DATA
+            }
+        }
+    }
+    services {
+        ssh {
+            root-login allow;
+        }
+        netconf {
+            ssh;
+        }
+        rest {
+            http {
+                port 3000;
+            }
+            enable-explorer;
+        }
+    }
+    syslog {
+        user * {
+            any emergency;
+        }
+        file messages {
+            any notice;
+            authorization info;
+        }
+        file interactive-commands {         
+            interactive-commands any;
+        }
+    }
+    processes {
+        dhcp-service {
+            traceoptions {
+                file dhcp_logfile size 10m;
+                level all;
+                flag packet;
+            }
+        }
+    }
+    {% if ntp_server is defined %}
+    ntp {
+        server {{ ntp_server }};
+    }
+    {% endif %}
+    {% if time_zone is defined %}
+    time-zone {{ time_zone }};
+    {% endif %}
+}

@@ -25,14 +25,18 @@ In a nutshell, NITA can be used as a toolbox from which you can automate the dep
 
 # Examples
 
-If you want to experiment to see what NITA can do, we currently have [2 example projects](https://github.com/Juniper/nita-webapp/tree/22.8/examples) that are provided in the webapp repository:
+If you want to experiment to see what NITA can do, we currently have [3 example projects](https://github.com/Juniper/nita/tree/main/examples) that are provided in this repository:
 
-* Build and test an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita-webapp/tree/22.8/examples/evpn_vxlan_erb_dc)
+* [ChatGPT Integration with Robot and Jenkins](https://github.com/Juniper/nita/tree/main/examples/chatgpt).
+
+    Ever needed help investigating why an automated test has failed? This example will send failed test case descriptions to ChatGPT and ask for the top suggestions on how to solve them. All of a sudden, you will look like a genius!
+
+* Build and test an [EVPN VXLAN data centre using Juniper QFX devices](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc)
 
     This includes all of the config that you need to build the data centre fabric and VXLAN overlay along with 14 example Robot tests for the firewalls, switches, BGP leaf and spine devices and end IP connectivity.
 We show integration with other operational tools for "Day 2 Management", storing inventory in Netbox and having that push changes to the network via the Juniper Paragon Insights product.
 
-* Build and test a [Simple DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita-webapp/tree/22.8/examples/ebgp_wan)
+* Build and test a [Simple DC WAN topology based on IPCLOS and eBGP](https://github.com/Juniper/nita/tree/main/examples/ebgp_wan)
 
     This is between 2 example datacentres, with 13 example Robot tests for border leaf routers, DC spines and WAN PE devices, plus BGP and IP connectivity tests.
 
@@ -51,14 +55,13 @@ You have landed on the meta repository which links to all of the Juniper Network
 * https://github.com/Juniper/nita-ansible
 * https://github.com/Juniper/nita-jenkins
 * https://github.com/Juniper/nita-robot
-* https://github.com/Juniper/nita-cli
 * https://github.com/Juniper/nita-yaml-to-excel
 
 Please refer to the README in each submodule for more details.
 
 # Getting Involved
 
-We hope that you enjoy using NITA, and if you do, please give the code a star on GitHub. If you spot anything wrong please raise an Issue and if you want to contribute please raise a Pull Request on the work that you have done.
+We hope that you enjoy using NITA, and if you do, please give the code a star on GitHub. If you spot anything wrong please raise an Issue and if you want to contribute please raise a Pull Request on the work that you have done. You can find out more details about how to contribute by reading the [CONTRIBUTE.md](CONTRIBUTE.md) document.
 
 # Copyright
 

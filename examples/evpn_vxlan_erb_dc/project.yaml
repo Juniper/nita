@@ -1,0 +1,66 @@
+# ********************************************************
+#
+# Project: nita
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
+description: EVPN VLXAN ERB Data Center
+name: evpn_vxlan_erb_dc_1.3
+action:
+  - name: Build
+    jenkins_url: build_qfx_fabric
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash build.sh ${build_dir}"'
+
+  - name: Build server interfaces
+    jenkins_url: build_server_interfaces
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash configure_bms.sh ${build_dir}"'
+
+  - name: Build base config
+    jenkins_url: base_qfx_fabric
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash base.sh ${build_dir}"'
+
+  - name: Dump configuration
+    jenkins_url: dump_qfx_fabric
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash dump.sh ${build_dir}"'
+
+  - name: Test
+    jenkins_url: test_qfx_fabric
+    #must be one of NOOB, BUILD or TEST
+    category: TEST
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash test_setup.sh ${build_dir}"
+      write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name robot -e ROBOT_OPTIONS="-d ${PWD}/test/outputs" juniper/nita-robot:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash test.sh"'
+      output_path: test/outputs/
+
+  - name: Netbox Population
+    jenkins_url: netbox_population
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash netbox.sh ${build_dir}"'
+
+  - name: HealthBot Population
+    jenkins_url: healthbot_population
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash healthbot.sh ${build_dir}"'

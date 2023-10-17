@@ -1,0 +1,40 @@
+description: Simple IPCLOS based WAN setup to link two data centers
+name: ebgp_wan_0.3
+
+action:
+  - name: Build
+    jenkins_url: build_vmx_wan
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash build.sh ${build_dir}"'
+
+  - name: Dump configuration
+    jenkins_url: dump_vmx_wan
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash dump.sh ${build_dir}"'
+
+  - name: Test
+    jenkins_url: test_vmx_wan
+    #must be one of NOOB, BUILD or TEST
+    category: TEST
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash test_setup.sh ${build_dir}"
+      write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name robot -e ROBOT_OPTIONS="-d ${PWD}/test/outputs" juniper/nita-robot:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash test.sh"'
+      output_path: test/outputs/
+
+  - name: Netbox Population
+    jenkins_url: netbox_population
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash netbox.sh ${build_dir}"'
+
+  - name: HealthBot Population
+    jenkins_url: healthbot_population
+    #must be one of NOOB, BUILD or TEST
+    category: BUILD
+    configuration:
+      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-1 /bin/bash -c "cd ${WORKSPACE}; bash healthbot.sh ${build_dir}"'

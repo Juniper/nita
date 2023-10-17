@@ -1,0 +1,122 @@
+---
+- import_playbook: ../make_clean.yaml
+- import_playbook: ../make_etc_hosts.yaml
+
+- name: "Create API Token in Netbox"
+  connection: local
+  hosts: nita
+  gather_facts: false
+
+  tasks:
+    - name: Bash script to create an API Token in Netbox
+      shell: |
+        HOST='{{ netbox_url }}'
+        USER='{{ netbox_user }}'
+        PASS='{{ netbox_pass }}'
+        KEY='{{ netbox_token }}'
+
+        DJANGO_LOGIN=$HOST/login/
+        DJANGO_API_TOKEN=$HOST/user/api-tokens/add/
+
+        COOKIES=cookies.txt
+        DATAFILE=curl-data.txt
+
+        CURL_BIN="curl --insecure -s -c $COOKIES -b $COOKIES -e $DJANGO_LOGIN"
+
+        function django_token {
+            echo "csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+        }
+
+        umask 0007
+
+        echo -n "Django Auth: get csrftoken ..."
+        $CURL_BIN $DJANGO_LOGIN > /dev/null
+
+        echo -n " perform login ..."
+        echo "`django_token`;username=$USER;password=$PASS" > $DATAFILE
+        $CURL_BIN -X POST -d @$DATAFILE $DJANGO_LOGIN > /dev/null
+
+        echo -n " create API Token ..."
+        echo "`django_token`;key=$KEY;write_enabled=true" > $DATAFILE
+        $CURL_BIN -X POST -d @$DATAFILE $DJANGO_API_TOKEN > /dev/null
+
+        echo " logout"
+        rm $COOKIES $DATAFILE
+      args:
+        chdir: ~
+
+- name: "Create Site, Roles, Types and Manufacturers"
+  connection: local
+  hosts: nita
+  gather_facts: false
+  collections:
+    - netbox.netbox
+
+  tasks:
+    - name: Sites
+      netbox_site:
+        netbox_url: "{{ netbox_url }}"
+        netbox_token: "{{ netbox_token }}"
+        data:
+          name: "{{ netbox_site_name }}"
+        state: present
+        validate_certs: false
+
+    - name: Device Roles
+      netbox_device_role:
+        netbox_url: "{{ netbox_url }}"
+        netbox_token: "{{ netbox_token }}"
+        data:
+          name: "{{ item.name }}"
+          slug: "{{ item.slug }}"
+          color: "{{ item.color }}"
+        state: present
+        validate_certs: false
+      loop:
+        - { name: 'Leaf', slug: 'leaf', color: '2f6a31'}
+        - { name: 'Spine', slug: 'spine', color: 'cddc39'}
+        - { name: 'BMS', slug: 'bms', color: '607d8b'}
+        - { name: 'WAN', slug: 'wan', color: 'fc03f8'}
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Manufacturers
+      netbox_manufacturer:
+        netbox_url: "{{ netbox_url }}"
+        netbox_token: "{{ netbox_token }}"
+        data:
+          name: Juniper
+          slug: jnpr
+        state: present
+        validate_certs: false
+
+    - name: Device Types
+      netbox_device_type:
+        netbox_url: "{{ netbox_url }}"
+        netbox_token: "{{ netbox_token }}"
+        data:
+          model: "{{ item.model }}"
+          manufacturer: "{{ item.manufacturer }}"
+          slug: "{{ item.slug }}"
+        state: present
+        validate_certs: false
+      loop:
+        - { model: 'Switch', manufacturer: 'jnpr', slug: 'switch'}
+        - { model: 'Server', manufacturer: 'jnpr', slug: 'server'}
+        - { model: 'Router', manufacturer: 'jnpr', slug: 'router'}
+      loop_control:
+        label: "{{ item.model }}"
+
+- name: "Create Devices (PEs)"
+  connection: local
+  hosts: routers
+  gather_facts: false
+  collections:
+    - netbox.netbox
+
+  tasks:
+    - include_tasks: netbox_device.yaml
+      vars:
+        device_type: router
+        device_role: wan
+

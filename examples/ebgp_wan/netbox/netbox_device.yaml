@@ -1,0 +1,35 @@
+- name: Device
+  netbox_device:
+    netbox_url: "{{ netbox_url }}"
+    netbox_token: "{{ netbox_token }}"
+    data:
+      name: "{{ inventory_hostname }}"
+      device_type: "{{ device_type }}"
+      device_role: "{{ device_role }}"
+      site: "{{ netbox_site_name }}"
+    state: present
+    validate_certs: false
+
+- name: Managment Interface
+  netbox_device_interface:
+    netbox_url: "{{ netbox_url }}"
+    netbox_token: "{{ netbox_token }}"
+    data:
+      device: "{{ inventory_hostname }}"
+      name: "{{ management_interface.int }}"
+      type: virtual
+      mgmt_only: true
+    state: present
+    validate_certs: false
+
+- name: Management IP Address
+  netbox_ip_address:
+    netbox_url: "{{ netbox_url }}"
+    netbox_token: "{{ netbox_token }}"
+    data:
+      address: "{{ management_interface.ip }}/{{ management_interface.mask }}"
+      interface:
+        name: "{{ management_interface.int }}"
+        device: "{{ inventory_hostname }}"
+    state: present
+    validate_certs: false

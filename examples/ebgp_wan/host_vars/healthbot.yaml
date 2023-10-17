@@ -1,0 +1,6 @@
+---
+management_interface:
+  int: eth0
+  ip: 100.123.0.19
+  mask: 16
+vm_user: jcluser
