@@ -6,7 +6,7 @@ NITA is an open source platform for automating the building and testing of compl
 
 # Release Notes
 
-For a list of new features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/22.8/README.md#217-new-features-and-bug-fixes).
+For a list of new features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/22.8/README.md#228-new-features-and-bug-fixes).
 
 # History
 
