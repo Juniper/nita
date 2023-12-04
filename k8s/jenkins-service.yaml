@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: nita
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yaml -v
+    kompose.version: 1.22.0 (955b78124)
+  labels:
+    io.kompose.service: jenkins
+  name: jenkins
+  resourceVersion: "1255458"
+  uid: 40478c56-8a2c-4777-b6ee-9a283ec4598f
+spec:
+  clusterIP: 10.104.250.46
+  clusterIPs:
+  - 10.104.250.46
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: "8443"
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  - name: "8080"
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    io.kompose.service: jenkins
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

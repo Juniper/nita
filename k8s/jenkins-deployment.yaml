@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: nita
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yaml -v
+    kompose.version: 1.22.0 (955b78124)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: jenkins
+  name: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: jenkins
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yaml -v
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/nita-network: "true"
+        io.kompose.service: jenkins
+    spec:
+      serviceAccount: internal-jenknis-pod
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 0
+      containers:
+        - env:
+            - name: JENKINS_OPTS
+              value: --httpPort=8080 --httpsPort=8443 --httpsKeyStore=/var/jenkins_home/certificate/jenkins_keystore.jks --httpsKeyStorePassword=nita123
+          image: juniper/nita-jenkins:22.8-1
+          name: jenkins
+          ports:
+            - containerPort: 8443
+              hostPort: 8443
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+            - mountPath: /var/jenkins_home/certificate
+              name: jenkins-cert
+            - mountPath: /project
+              name: project
+            - mountPath: /var/jenkins_home
+              name: jenkins-home
+      restartPolicy: Always
+      volumes:
+        - name: jenkins-cert
+          configMap:
+            name: jenkins-keystore
+        - name: project
+          hostPath:
+            path: /var/nita_project
+        - name: jenkins-home
+          persistentVolumeClaim:
+            claimName: jenkins-home
