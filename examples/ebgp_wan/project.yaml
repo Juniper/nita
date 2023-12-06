@@ -12,7 +12,7 @@
 #
 # ********************************************************
 description: EVPN VLXAN ERB Data Center
-name: evpn_vxlan_erb_dc_1.3
+name: ebgp_wan_0.3
 action:
   - name: Build
     jenkins_url: build_qfx_fabric
