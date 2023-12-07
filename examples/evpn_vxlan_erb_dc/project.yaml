@@ -21,13 +21,6 @@ action:
     configuration:
       shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py build juniper/nita-ansible:22.8-1; kubectl apply -f build.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/build; kubectl logs job/build -f'
 
-  - name: Build server interfaces
-    jenkins_url: build_server_interfaces
-    #must be one of NOOB, BUILD or TEST
-    category: BUILD
-    configuration:
-      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s_cfg_bms.py; kubectl apply -f nita-ansible-cfg-bms.yaml; sleep 10; kubectl logs job/nita-ansible -f'
-
   - name: Build base config
     jenkins_url: base_qfx_fabric
     #must be one of NOOB, BUILD or TEST
@@ -40,7 +33,7 @@ action:
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s_dump.py; kubectl apply -f nita-ansible-job-dump.yaml; sleep 10; kubectl logs job/nita-ansible -f'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py dump juniper/nita-ansible:22.8-1; kubectl apply -f dump.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/dump; kubectl logs job/dump -f'
 
   - name: Test
     jenkins_url: test_qfx_fabric
