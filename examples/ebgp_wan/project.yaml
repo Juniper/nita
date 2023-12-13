@@ -1,40 +1,37 @@
+# ********************************************************
+#
+# Project: nita
+#
+# Copyright (c) Juniper Networks, Inc., 2021. All rights reserved.
+#
+# Notice and Disclaimer: This code is licensed to you under the Apache 2.0 License (the "License"). You may not use this code except in compliance with the License. This code is not an official Juniper product. You can obtain a copy of the License at https://www.apache.org/licenses/LICENSE-2.0.html
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
+#
+# ********************************************************
 description: Simple IPCLOS based WAN setup to link two data centers
 name: ebgp_wan_0.3
-
 action:
   - name: Build
     jenkins_url: build_vmx_wan
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-2 /bin/bash -c "cd ${WORKSPACE}; bash build.sh ${build_dir}"'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py build juniper/nita-ansible:22.8-2; kubectl apply -f build.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/build; kubectl logs job/build -f'
 
   - name: Dump configuration
     jenkins_url: dump_vmx_wan
     #must be one of NOOB, BUILD or TEST
     category: BUILD
     configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-2 /bin/bash -c "cd ${WORKSPACE}; bash dump.sh ${build_dir}"'
+      shell_command: 'write_yaml_files.py; python3 create_ansible_job_k8s.py dump juniper/nita-ansible:22.8-2; kubectl apply -f dump.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/dump; kubectl logs job/dump -f'
 
   - name: Test
     jenkins_url: test_vmx_wan
     #must be one of NOOB, BUILD or TEST
     category: TEST
     configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-2 /bin/bash -c "cd ${WORKSPACE}; bash test_setup.sh ${build_dir}"
-      write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name robot -e ROBOT_OPTIONS="-d ${PWD}/test/outputs" juniper/nita-robot:22.8-2 /bin/bash -c "cd ${WORKSPACE}; bash test.sh"'
-      output_path: test/outputs/
-
-  - name: Netbox Population
-    jenkins_url: netbox_population
-    #must be one of NOOB, BUILD or TEST
-    category: BUILD
-    configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-2 /bin/bash -c "cd ${WORKSPACE}; bash netbox.sh ${build_dir}"'
-
-  - name: HealthBot Population
-    jenkins_url: healthbot_population
-    #must be one of NOOB, BUILD or TEST
-    category: BUILD
-    configuration:
-      shell_command: 'write_yaml_files.py; docker run -u root -v "/var/nita_project:/project:rw" -v "/var/nita_configs:/var/tmp/build:rw" --rm --name ansible juniper/nita-ansible:22.8-2 /bin/bash -c "cd ${WORKSPACE}; bash healthbot.sh ${build_dir}"'
+      shell_command: 'write_yaml_files.py; python3 robot.py job-ansible juniper/nita-ansible:22.8-2 job-robot juniper/nita-robot:22.8-2; kubectl apply -f job-ansible.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/job-ansible; kubectl logs job/job-ansible -f; kubectl apply -f job-robot.yaml; kubectl wait --for=jsonpath="{.status.ready}"=1 job/job-robot; kubectl logs job/job-robot -f'
+      output_path: test/outputs

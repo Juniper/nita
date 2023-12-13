@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: nita
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yaml -v
+    kompose.version: 1.22.0 (955b78124)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: proxy
+  name: proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: proxy
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yaml -v
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/nita-network: "true"
+        io.kompose.service: proxy
+    spec:
+      containers:
+        - image: nginx:stable
+          name: proxy
+          ports:
+            - containerPort: 443
+              hostPort: 443
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+          - name: proxy-conf
+            mountPath: /etc/nginx/
+          - name: proxy-cert
+            mountPath: /etc/certificate/
+          - name: tmpfs-1
+            mountPath: /var/run
+          - name: tmpfs-2
+            mountPath: /var/cache/nginx
+      volumes:
+        - name: proxy-conf
+          configMap:
+            name: proxy-config-cm
+            defaultMode: 0777
+        - name: proxy-cert
+          configMap:
+            name: proxy-cert-cm
+            defaultMode: 0777
+        - name: tmpfs-1
+          emptyDir: {}
+        - name: tmpfs-2
+          emptyDir: {}
+      restartPolicy: Always

@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: modify-pods-to-sa
+subjects:
+  - kind: ServiceAccount
+    name: internal-jenknis-pod
+    namespace: nita  
+roleRef:
+  kind: ClusterRole
+  name: modify-pods
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: webapp
+  name: webapp
+  namespace: nita
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - port: 8000
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    io.kompose.service: webapp
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

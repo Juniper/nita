@@ -1,0 +1,32 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  namespace: nita
+  name: modify-pods
+rules:
+  - apiGroups: [""]  
+    resources:
+      - pods/log
+      - jobs 
+    verbs:
+      - get
+      - list
+      - delete
+  - apiGroups: ["batch", "extensions"]
+    resources:
+      - jobs
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete      
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - delete

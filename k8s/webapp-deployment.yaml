@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: nita
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yaml -v
+    kompose.version: 1.22.0 (955b78124)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: webapp
+  name: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: webapp
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yaml -v
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.network/nita-network: "true"
+        io.kompose.service: webapp
+    spec:
+      containers:
+        - args:
+            - ./build-and-test-webapp/wait-for-db.sh
+          env:
+            - name: DJANGO_LOG_LEVEL
+              value: DEBUG
+          image: juniper/nita-webapp:22.8-1
+          name: webapp
+          resources: {}
+      restartPolicy: Always
+status: {}
