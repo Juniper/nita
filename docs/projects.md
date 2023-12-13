@@ -32,7 +32,7 @@ Now, let's say that spine devices in ``dc1`` should have one standard config, an
 
 ## Junos Commands and Templates
 
-Now let's think about the configurations needed for each device and let's standardise them by using a template. Templates make your life easier and make troubleshooting simpler because everything should be stardard and consistent. For this example, let's say that we want to configure syslog so that certain types of message are forwarded to a named loghost. In ``dc1`` we will send messages to the loghost at ``100.123.0.17`` and in ``dc2`` we will send messages to the loghost at ``100.123.0.16``. We will configure all spine devices so that messages from ``any`` facility that are of the ``warning`` severity or above and messages from the  ``daemon`` facility at ``info`` level or above are forwarded to the appropriate loghost.
+Now let's think about the configurations needed for each device and let's standardise them by using a template. Templates make your life easier and make troubleshooting simpler because everything should be standard and consistent. For this example, let's say that we want to configure syslog so that certain types of message are forwarded to a named loghost. In ``dc1`` we will send messages to the loghost at ``100.123.0.17`` and in ``dc2`` we will send messages to the loghost at ``100.123.0.16``. We will configure all spine devices so that messages from ``any`` facility that are of the ``warning`` severity or above and messages from the  ``daemon`` facility at ``info`` level or above are forwarded to the appropriate loghost.
 
 If we were using the Junos CLI, the commands to enter would look something like this:
 

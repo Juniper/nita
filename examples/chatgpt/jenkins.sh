@@ -25,7 +25,7 @@ if [[ $# -lt 1 ]] || [[ "$1" == "--"* ]]; then
     java_opts_array+=( "-D${agent_port_property}=${JENKINS_SLAVE_AGENT_PORT}" )
   fi
 
-  java_opts_array+=( "-Dhudson.remoting.ClassFilter=hudson.plugins.robot.model.RobotSuiteResult,hudson.plugins.robot.model.RobotCaseResult,hudson.plugins.robot.util.failedCases,hudson.plugins.robot.model.RobotResult,hudson.plugins.robot.RobotBuildAction")
+  java_opts_array+=( "-Dhudson.remoting.ClassFilter=hudson.plugins.robot.RobotPublisher,hudson.plugins.robot.model.RobotSuiteResult,hudson.plugins.robot.model.RobotCaseResult,hudson.plugins.robot.util.failedCases,hudson.plugins.robot.model.RobotResult,hudson.plugins.robot.RobotBuildAction")
 
 
   readonly lifecycle_property='hudson.lifecycle'
