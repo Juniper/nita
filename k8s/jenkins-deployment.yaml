@@ -35,6 +35,10 @@ spec:
             - name: JENKINS_OPTS
               value: --httpPort=8080 --httpsPort=8443 --httpsKeyStore=/var/jenkins_home/certificate/jenkins_keystore.jks --httpsKeyStorePassword=nita123
           image: juniper/nita-jenkins:22.8-1
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c","keytool -import -keystore /opt/java/openjdk/lib/security/cacerts -file /var/jenkins_home/certificate/crt/jenkins.crt -keypass changeit -storepass changeit -noprompt"]
           name: jenkins
           ports:
             - containerPort: 8443
@@ -48,8 +52,13 @@ spec:
               name: project
             - mountPath: /var/jenkins_home
               name: jenkins-home
+            - mountPath: /var/jenkins_home/certificate/crt
+              name: jenkins-crt   
       restartPolicy: Always
       volumes:
+        - name: jenkins-crt
+          configMap:
+            name: jenkins-crt
         - name: jenkins-cert
           configMap:
             name: jenkins-keystore

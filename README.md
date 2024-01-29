@@ -115,8 +115,16 @@ NAME                   SECRETS   AGE
 default                0         52d
 internal-jenknis-pod   0         52d
 ```
+To be able to use the nita-cli Jenkins commands we have to extract the crt from the jenkins_keystore create a Kubernetes configMap and the jenkins-deployment yaml will load that at pod initialization.
+First create a jenkins_keystore if you did not create one previously:
+```
+keytool -genkey -keyalg RSA -alias selfsigned -keystore jenkins_keystore.jks -keypass nita123 -storepass nita123 -keysize 4096 -dname "cn=jenkins, ou=, o=, l=, st=, c="
+keytool -importkeystore -srckeystore jenkins_keystore.jks -destkeystore jenkins.p12 -deststoretype PKCS12
+openssl pkcs12 -in jenkins.p12 -nokeys -out jenkins.crt
+```
 Other special considerations are configmaps for jenkins and its proxy:
 ```
+kubectl create configmap jenkins-crt --from-file=/home/jcluser/nita-jenkins/certificates/jenkins.crt --namespace nita
 kubectl create cm jenkins-keystore --from-file=/home/jcluser/nita-jenkins/certificates/jenkins_keystore.jks --namespace nita
 kubectl create cm proxy-config-cm --from-file=/home/jcluser/nginx/nginx.conf --namespace nita
 kubectl create cm proxy-cert-cm --from-file=/home/jcluser/nginx/certificates/ --namespace nita
@@ -125,6 +133,7 @@ as shown here:
 ```
 jcluser@ubuntu:~$ kubectl get cm -n nita
 NAME               DATA   AGE
+jenkins-crt        1      52d
 jenkins-keystore   1      52d
 proxy-cert-cm      2      52d
 proxy-config-cm    1      52d
