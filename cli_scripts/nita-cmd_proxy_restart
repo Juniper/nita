@@ -12,7 +12,23 @@
 # Third-Party Code: This code may depend on other components under separate copyright notice and license terms. Your use of the source code for those components is subject to the terms and conditions of the respective license as noted in the Third-Party source code file.
 #
 # ********************************************************
-        echo -n "    nita-cmd kube cm detail => "
-        echo `cat <<EOT
-Get full details of configured config maps
-EOT` >&2
+
+# Priority order is top down
+
+if [ -x "$(command -v kubectl)" ]; then
+
+    # Rollout starts a new pod before terminating the old one
+
+    CMD="kubectl rollout restart deployment/proxy -n nita"
+
+else
+
+  echo 'Error: cannot find required binaries.' >&2
+  exit 1
+
+fi
+
+[ ${_CLI_RUNNER_DEBUG} ] && echo ${CMD}>&2
+
+eval "${CMD}"
+
