@@ -1,12 +1,48 @@
-# NITA 22.8
+# NITA 23.12
 
-Welcome to NITA 22.8.
+Welcome to NITA 23.12
 
 NITA is an open source platform for automating the building and testing of complex networks.
 
 # Release Notes
 
-For a list of new features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/22.8/README.md#217-new-features-and-bug-fixes).
+The major change in this version is that all components now run within pods under the control of Kubernetes, rather than as Docker containers. Consequently we have updated some infrastructure as well as the ``nita-cmd`` CLI to support Kubernetes.
+
+We have also tested extensively on Ubuntu version 22.04.03 LTS which is required if you wish to use the new ``install.sh`` script. 
+
+For a list of previous features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/22.8/README.md#217-new-features-and-bug-fixes).
+
+# Installation
+
+A new ``install.sh`` script is provided with this release, which makes it easy to install everything that you need in one go. It should work for most people in most cases, if you are running Ubuntu 22.04 LTS or later. Because the script can install required system dependencies you will need super user access to run it, either as ``root`` or as a user with ``sudo`` privileges. Simply download the raw script file from this GitHub repository, make it executable and then run it like this:
+
+```
+$ sudo -E ./install.sh
+[sudo] password for user:
+install.sh: NITA install script.
+Install system dependencies (y|n|q)? [n] y
+.
+.
+.
+```
+Answer ``Y`` for each action that you want to perform, ``N`` to skip and ``Q`` to quit out of the script completely. Most people will just need to enter ``Y`` and accept the defaults. Note that on a barebones Ubuntu system, you will need approximately 3GB of free storage in order to install NITA, which includes all of the system dependencies and the Kubernetes pods.
+
+## Environment Variables
+
+The ``install.sh`` script uses several environment variables, which you can set in the parent shell beforehand if you want to use something other than the defaults. These variables are outlined in this table:
+
+Environment Variable | Default Value | Meaning
+---|---|---
+``NITAROOT`` | ``/opt`` | Where to install the NITA repositories
+``BINDIR`` | ``/usr/local/bin`` | Where to install executables such as ``nita-cmd``
+``BASH_COMPLETION`` | ``/etc/bash_completion.d`` | Location of bash completion files
+``K8SROOT`` | ``$NITAROOT/nita/k8s`` | Location of Kubernetes ``YAML`` files
+``PROXY`` | ``$K8SROOT/proxy`` | Location of ``nginx`` configuration
+``CERTS`` | ``$PROXY/certificates`` | Location of ``nginx`` certificate files
+``JENKINS`` | ``$K8SROOT/jenkins`` | Location of Jenkins keys and certificate files
+``KEYPASS`` | ``nita123`` | Passkey used to create self-signed Jenkins keys
+``KUBEROOT`` | ``/etc/kubernetes`` | System location for Kubernetes configuration
+``KUBECONFIG`` | ``$KUBEROOT/admin.conf`` | Location of user's Kubernetes configuration
 
 # History
 
@@ -23,7 +59,7 @@ As a platform, NITA comprises some of the best Automation tools currently availa
 
 In a nutshell, NITA can be used as a toolbox from which you can automate the deployment and testing of very complex networks. It is vendor neutral and so can be used to build and test networks from all of the leading vendors in the market. And because it is a toolbox it can be extended to include any other tool that you may need.
 
-# Examples
+# Example Projects
 
 If you want to experiment to see what NITA can do, we currently have [3 example projects](https://github.com/Juniper/nita/tree/main/examples) that are provided in this repository:
 
@@ -47,7 +83,7 @@ and taking the Junos Platform and Automation training courses.  These will give 
 
 https://learningportal.juniper.net/juniper/user_activity_info.aspx?id=10840
 
-# Installation
+# Other NITA Repositories
 
 You have landed on the meta repository which links to all of the Juniper Networks NITA submodules on GitHub. Modules can be downloaded independently from these links:
 
@@ -59,9 +95,9 @@ You have landed on the meta repository which links to all of the Juniper Network
 
 Please refer to the README in each submodule for more details.
 
-# Porting of Juniper NITA project to Kubernetes
+# Porting NITA to Kubernetes
 
-The setup of the infrastructure pods is straightforward, and at the end of the setup we should have 4 running pods that are:
+This section gives some details of the pods used in NITA, which you may find helpful if you want to go off-piste. The setup of the infrastructure pods is straightforward, and at the end of the setup we should have 4 running pods that are:
 ```
 kubectl get pods -n nita
 NAME                      READY   STATUS    RESTARTS       AGE
@@ -145,7 +181,7 @@ We hope that you enjoy using NITA, and if you do, please give the code a star on
 
 # Copyright
 
-Copyright 2022, Juniper Networks, Inc.
+Copyright 2024, Juniper Networks, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
