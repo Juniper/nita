@@ -43,6 +43,7 @@ Environment Variable | Default Value | Meaning
 ``KEYPASS`` | ``nita123`` | Passkey used to create self-signed Jenkins keys
 ``KUBEROOT`` | ``/etc/kubernetes`` | System location for Kubernetes configuration
 ``KUBECONFIG`` | ``$KUBEROOT/admin.conf`` | Location of user's Kubernetes configuration
+``DEBUG`` | unset | Set it to true in the parent shell, to see additional output
 
 # History
 
@@ -55,7 +56,7 @@ As a platform, NITA comprises some of the best Automation tools currently availa
 * Ansible, for configuration change management
 * Jenkins, for automation and job control
 * Robot Framework, for test automation
-* Docker, for packaging and easy deployment
+* Kubernetes, for container orchestration
 
 In a nutshell, NITA can be used as a toolbox from which you can automate the deployment and testing of very complex networks. It is vendor neutral and so can be used to build and test networks from all of the leading vendors in the market. And because it is a toolbox it can be extended to include any other tool that you may need.
 
