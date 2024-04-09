@@ -93,7 +93,7 @@ Question "Install system dependencies" && {
 
 	echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
 
-	# apt-get update
+	apt-get update
 	apt-get install -y containerd.io
 	apt-get install -y curl gnupg2 software-properties-common apt-transport-https
 	apt-get install -y git
@@ -281,7 +281,7 @@ Question "Install NITA repositories" && {
 
 }
 
-Question "Do you want to run standalone Ansible containers" && {
+Question "Do you want to run Ansible as a standalone Docker container" && {
 
 	# Running standalone Ansible containers requires docker
 
@@ -298,5 +298,6 @@ Debug "ls -al ${NITAROOT}"
 
 echo "${ME}: NITA installation has finished."
 echo ""
+echo "${ME}: Remember to ${bold}source your bashrc file${normal} to set KUBECONFIG in your shell"
 echo "${ME}: You can access the NITA webapp at https://${HOST}:443"
 echo "${ME}: You can access the Jenkins UI at https://${HOST}:8443"
