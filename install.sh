@@ -9,6 +9,7 @@
 
 ME="${0##*/}"						# This scripts name
 HOST=`uname -n`
+REALUSER="${SUDO_USER:-${USER}}"			# User behind sudo
 bold=$(tput bold)					# For echo emphasis
 normal=$(tput sgr0)
 
@@ -92,7 +93,7 @@ Question "Install system dependencies" && {
 
 	echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
 
-	apt-get update
+	# apt-get update
 	apt-get install -y containerd.io
 	apt-get install -y curl gnupg2 software-properties-common apt-transport-https
 	apt-get install -y git
@@ -165,7 +166,7 @@ Question "Initialise Kubernetes cluster" && {
 
 	kubeadm init --control-plane-endpoint="localhost" --ignore-preflight-errors=NumCPU
  
-	# And export config for now, before we run kubectl...
+	# And export kubeconfig for now, before we run kubectl...
 
 	export KUBECONFIG=${KUBEROOT}/admin.conf
 	echo "${ME}: Warning: Make sure KUBECONFIG is always set in your shell." 
@@ -209,6 +210,7 @@ Question "Install NITA repositories" && {
                         # Make symbolic links for nita cli scripts...
 
                         find ${NITAROOT}/${REPO}/cli_scripts -type f -name "nita-cmd*" -exec ln -s {} ${BINDIR} \;
+			chmod 755 ${NITAROOT}/${REPO}/cli_scripts/nita-cmd*
                 else
                         echo "${ME}: Warning: Directory already exists: \"${NITAROOT}/${REPO}\". Skipping."
                 fi
@@ -265,32 +267,30 @@ Question "Install NITA repositories" && {
 	Debug "kubectl get cm"
 	Debug "kubectl describe cm"
 	Debug "kubectl get ns nita"
-}
 
-Question "Do you want to set up K8S config for a local user" && {
+	# Finally, copy the K8S admin file to the local user and set ownership etc.
 
-	VALID_USER=1
-
-	# Create a local copy of the config file
-
-	while [ ${VALID_USER} -ne 0 ]
-	do
-        	echo -n "Enter a valid local user to own the K8S config: "
-        	read OWNER
-        	id "${OWNER}" >/dev/null 2>&1
-        	VALID_USER=$?
-	done
-
-	# Copy the K8S admin file to the local user and set ownership etc.
-
-	OWNER_HOME=`egrep "^${OWNER}" /etc/passwd | awk -F: '{print $6}'`
-	echo "${ME}: OK, creating ${OWNER_HOME}/.kube"
+	OWNER_HOME=`egrep "^${REALUSER}" /etc/passwd | awk -F: '{print $6}'`
+	echo "${ME}: Creating a local ${OWNER_HOME}/.kube"
 	mkdir -p ${OWNER_HOME}/.kube
 	cp -i ${KUBEROOT}/admin.conf ${OWNER_HOME}/.kube/config
-	chown -R $(id -u ${OWNER}):$(id -g ${OWNER}) ${OWNER_HOME}/.kube/
+	chown -R $(id -u ${REALUSER}):$(id -g ${REALUSER}) ${OWNER_HOME}/.kube/
 	echo "export KUBECONFIG=${HOME}/.kube/config" >> ${OWNER_HOME}/.bashrc
 
-	echo "${ME}: Now source your bashrc file to set KUBECONFIG in your shell"
+	echo "${ME}: Now ${bold}source your bashrc file${normal} to set KUBECONFIG in your shell"
+
+}
+
+Question "Do you want to run standalone Ansible containers" && {
+
+	# Running standalone Ansible containers requires docker
+
+	apt install -y docker-ce
+
+	# This step will avoid the need to be a sudoer
+
+	echo "${ME}: Adding user \"${REALUSER}\" to the docker group"
+	usermod -aG docker ${REALUSER}
 
 }
 
