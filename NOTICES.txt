@@ -1,0 +1,51 @@
+Name: ca-certificates
+URL: https://packages.ubuntu.com/jammy/ca-certificates
+License: Mozilla Public License Version 2.0
+
+Name: curl
+URL: https://curl.se/
+License: https://curl.se/docs/copyright.html
+
+Name: gnupg
+URL: https://www.gnupg.org/
+License: https://www.gnu.org/licenses/gpl-3.0.html
+
+Name: lsb-release
+URL: https://packages.ubuntu.com/jammy/lsb-release
+License: https://changelogs.ubuntu.com/changelogs/pool/main/l/lsb/lsb_11.1.0ubuntu4/copyright
+
+Name: docker
+URL: https://www.docker.com/
+License: https://www.docker.com/legal/docker-subscription-service-agreement/
+
+Name: containerd
+URL: https://containerd.io/
+License: https://github.com/containerd/containerd/blob/main/LICENSE
+
+Name: git
+URL: https://git-scm.com/
+License: https://git-scm.com/about/free-and-open-source
+
+Name: openjdk-19-jre-headless
+URL: https://packages.ubuntu.com/jammy/openjdk-19-jre-headless
+License: https://changelogs.ubuntu.com/changelogs/pool/universe/o/openjdk-19/openjdk-19_19.0.2+7-0ubuntu3~22.04/copyright
+
+Name: socat
+URL: http://www.dest-unreach.org/socat/
+License: http://www.dest-unreach.org/socat/doc/README
+
+Name: jq
+URL: https://jqlang.github.io/jq/
+License: jq is licensed under the MIT license (code) and the CC-BY-3.0 license (docs).
+
+Name: unzip
+URL: https://github.com/madler/unzip
+Licens: https://github.com/madler/unzip/blob/master/LICENSE
+
+Name: kubernetes
+URL: https://kubernetes.io/
+License: https://github.com/kubernetes/kubernetes/blob/master/LICENSE
+
+Name: Calico
+URL: https://www.tigera.io/project-calico/
+License: https://github.com/projectcalico/calico/blob/master/LICENSE.md
