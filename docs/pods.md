@@ -1,11 +1,10 @@
 # NAME
 
-Pods. Almost everything you need to know about the pods used by NITA.
+``pods``. Almost everything you need to know about the pods used by NITA.
 
 # SYNOPSIS
 
 ``nita-cmd kube [ pods | versions ] ``\
-``nita-cmd [ ips | stats ]``\
 ``nita-cmd [ ansible | jenkins | robot | webapp ] cli <args>...``\
 ``kubectl [ get | exec | describe ]``
 
@@ -57,12 +56,14 @@ You can use the ``nita-cmd kube pods`` command to get information about the infr
 If you read the nita-cmd documentation you will see that it is in fact just a wrapper for other shell scripts. When you run the ``nita-cmd kube pods`` command, 
 it is actually running the ``kubectl get pods -n nita`` command and filtering the output. For example, to see what pods are currently running on the NITA host, do this:
 
+```
 $ nita-cmd kube pods 
 NAME                       READY   STATUS    RESTARTS       AGE
 db-7cc98cd974-t4ppb        1/1     Running   3 (132m ago)   90d
 jenkins-768f9cd99b-fprh8   1/1     Running   3 (132m ago)   90d
 proxy-86dfdffcf5-zqzmq     1/1     Running   3 (133m ago)   90d
 webapp-75d694ff55-xk252    1/1     Running   3 (132m ago)   90d
+```
 
 ## Accessing a Container's Shell
 
