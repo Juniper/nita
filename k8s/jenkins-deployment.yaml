@@ -34,7 +34,7 @@ spec:
         - env:
             - name: JENKINS_OPTS
               value: --httpPort=8080 --httpsPort=8443 --httpsKeyStore=/var/jenkins_home/certificate/jenkins_keystore.jks --httpsKeyStorePassword=nita123
-          image: juniper/nita-jenkins:22.8-1
+          image: juniper/nita-jenkins:23.12-1
           lifecycle:
             postStart:
               exec:
