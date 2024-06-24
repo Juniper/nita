@@ -8,13 +8,13 @@ NITA is an open source platform for automating the building and testing of compl
 
 The major change in this version is that all components now run within pods under the control of Kubernetes, rather than as Docker containers. Consequently we have updated some infrastructure as well as the ``nita-cmd`` CLI to support Kubernetes.
 
-We have also tested extensively on Ubuntu version 22.04.03 LTS which is required if you wish to use the new ``install.sh`` script. 
+We have also tested extensively on Ubuntu version 22.04.03 LTS and AlmaLinux 9.3 Server, either of which is required if you wish to use the new ``install.sh`` script. We recommend that your system has at least 8GB of free memory and 20GB of storage space.
 
 For a list of previous features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/22.8/README.md#217-new-features-and-bug-fixes).
 
 # Installation
 
-A new ``install.sh`` script is provided with this release, which makes it easy to install everything that you need in one go. It should work for most people in most cases, if you are running Ubuntu 22.04 LTS or later. Because the script can install required system dependencies you will need super user access to run it, either as ``root`` or as a user with ``sudo`` privileges. Simply download the raw script file from this GitHub repository, make it executable and then run it like this:
+A new ``install.sh`` script is provided with this release, which makes it easy to install everything that you need in one go. It should work for most people in most cases, if you are running either Ubuntu 22.04 LTS or AlmaLinux 9.3 Server. Because the script can install required system dependencies you will need super user access to run it, either as ``root`` or as a user with ``sudo`` privileges. Simply download the raw script file from this GitHub repository, make it executable and then run it like this:
 
 ```
 $ sudo -E ./install.sh
@@ -44,6 +44,7 @@ Environment Variable | Default Value | Meaning
 ``KUBEROOT`` | ``/etc/kubernetes`` | System location for Kubernetes configuration
 ``KUBECONFIG`` | ``$KUBEROOT/admin.conf`` | Location of user's Kubernetes configuration
 ``DEBUG`` | unset | Set it to true in the parent shell, to see additional output
+``IGNORE_WARNINGS`` | unset | Set it to true in the parent shell if you want to install NITA and ignore any important warnings
 
 # History
 
