@@ -61,6 +61,9 @@ As a platform, NITA comprises some of the best Automation tools currently availa
 
 In a nutshell, NITA can be used as a toolbox from which you can automate the deployment and testing of very complex networks. It is vendor neutral and so can be used to build and test networks from all of the leading vendors in the market. And because it is a toolbox it can be extended to include any other tool that you may need.
 
+Here is a short video declaring how NITA can be used in your project, please follow the link:
+[YouTube|NITA](https://www.youtube.com/watch?v=6edtVe8Ueis)
+
 # Example Projects
 
 If you want to experiment to see what NITA can do, we currently have [3 example projects](https://github.com/Juniper/nita/tree/main/examples) that are provided in this repository:
