@@ -1,27 +1,17 @@
 **Project Name : NITA**
 
-Document Control\
-Juniper Professional Services Documents are frequently used and referenced by Customers and End-Users as authoritative reference documents and as part of their internal documentation and are frequently necessarily under change control.\
-This section is used to track versions and changes and provide evidence of reviews done as part of the project deliverables process and QA procedures.
-
-Revision History:
-|  Version |             | Status  | Author      | Reason for Change |
-| -------- | ------------| ------- | ------------| ----------------- |
-| 1.0      | 28/05/2024  | Draft   | Andy Hopper | Initial draft     |
-
-Juniper Professional Services Quality process requires Peer review.
-
-*Intellectual Property Rights\
-This document contains valuable trade secrets and confidential information of Juniper Networks and its affiliates, subsidiaries, and suppliers, and shall not be disclosed to any person, organization, or entity unless such disclosure is subject to the provisions of a written non-disclosure and proprietary rights agreement, or intellectual property license agreement approved by Juniper Networks. The distribution of this document does not grant any license in or rights, in whole or in part, to the content, the product(s), technology, or intellectual property described herein.*
+## Introduction
+-------
+This document serves as a guide demonstrating selected NITA features utilised in the Examples, drawing upon best practices to meet technical requirements for enabling NITA. It provides a detailed exploration of the outcomes related to the provided example items (EVPN and eBGP).
 
 **Contents**
 - [Introduction](#introduction)
-- [Lab Demo build process](#lab-demo-build-process)
+- [Lab Example build process](#lab-example-build-process)
   - [File Storage:](#file-storage)
   - [Startup/install script:](#startupinstall-script)
   - [Adding the Networks:](#adding-the-networks)
   - [Load Configuration Data](#load-configuration-data)
-- [Initiate the "NOOB (New Out Of the Box)" process -- I think this section should just be removed and further context added later once we populate the examples? please confirm](#initiate-the-noob-new-out-of-the-box-process----i-think-this-section-should-just-be-removed-and-further-context-added-later-once-we-populate-the-examples-please-confirm)
+- ["NOOB (New Out Of the Box)" process](#noob-new-out-of-the-box-process)
 - [Running the Build Process](#running-the-build-process)
   - [Monitor NITA UI Build process](#monitor-nita-ui-build-process)
   - [Monitor Jenkins Build Process](#monitor-jenkins-build-process)
@@ -32,31 +22,23 @@ This document contains valuable trade secrets and confidential information of Ju
   - [Jenkins Results](#jenkins-results)
   - [Jenkins expanded results view](#jenkins-expanded-results-view)
 
-The following keywords in this document, fully written in uppercase as:
-
-\"MUST", \"MUST NOT", \"REQUIRED", \"SHALL", \"SHALL NOT", \"SHOULD", \"SHOULD NOT", \"RECOMMENDED", \"MAY" and "OPTIONAL" are to be interpreted as described in [RFC2119](http://tools.ietf.org/html/rfc2119).
-
-## Introduction
--------
-
-This document is leveraging best practices expertise and experience of Juniper Professional Services based on technical requirements to enable NITA. It is an outcome of the Provided Demo items and will be used as input into subsequent Test and Implementation deliverables.
-
-## Lab Demo build process
-Clone the required demo files for the lab build process from the [NITA repo](https://github.com/Juniper/nita.git) locally to your machine and verify that you can access the following directories:
+## Lab Example build process
+To begin the lab build process clone the Example files for the lab build process from the [NITA repo](https://github.com/Juniper/nita.git) locally to your machine and verify that you can access the following directories:
 
 -   [*nita/examples/evpn\_vxlan\_erb\_dc*](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc)
 
 -   [*nita/examples/ebgp\_wan*](https://github.com/Juniper/nita/tree/main/examples/ebgp_wan)
 
-The above directories are required to proceed with the demo - You will need access these directories during the procedure.
+The above directories are required to proceed with the Example - You will need access to these directories during the procedure.
 
 ### File Storage:
 After you have cloned the repo to your local machine proceed to zip the example folders for upload into the NITA webapp - **ensure** to preserve the directories locally to make it easier to access some specific files used during the build process going forward.
 
+```shell
 zip -r evpn\_vxlan\_erb\_dc [examples/evpn\_vxlan\_erb\_dc](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc)
 
 zip -r ebgp\_wan [examples/ebgp\_wan](https://github.com/Juniper/nita/tree/main/examples/ebgp_wan)
-
+```
 By using the latest repo and following these steps will ensure that you have access to the most up-to-date examples ready for the lab build process in the next steps - please also note at this point that if you need to modify the relevant device data to accommodate your lab nodes you will need to refer to the [projects.md](https://github.com/Juniper/nita/blob/main/docs/projects.md) and follow the relevant instructions within.
 
 ### Startup/install script:
@@ -66,7 +48,7 @@ Open a new terminal window in the NITA repo root directory and follow the instru
 *Please note: Ensure to leave the NITA process to completely build the pods prior to attempting to access the portals defined -- this process can take around 20+mins to complete, it has to download the images required and start the pods, once completed you will be able to use the NITA web application and later the Jenkins portals, to check on the progress of this stage use the **nita-cmd kube pods** cli command and observe the pod status.*
 
 **Webapp portal for Nita UI:**\
-At the end of the installation process you will be provided with the relevant URLs for NITA (https://NODE-IP & https://NODE-IP:8443) - Proceed by logging into the NITA webapp UI using the default credentials:
+At the end of the installation process you will be provided with relevant URLs for NITA (```https://"YOUR-NODE-IP"``` & ```https://"YOUR-NODE-IP":8443```) - Proceed by logging into the NITA webapp UI using the default credentials:
 | Username | Password |
 |---|---|
 | ``vagrant`` | ``vagrant123`` |
@@ -81,15 +63,15 @@ Within this interface, navigate to the left-hand pane and click on the \"Network
 
 ![Nita Network Type](images/demo/demo_nwk_type.png)
 
-Next, locate the example files/folders that you previously compressed in the [File Storage](#file-storage) step and when prompted, specify the location of your zip files on your local machine. Upon successfully completing the steps outlined, you will observe the demo examples appearing within the \"Network Types\" section of the NITA webapp portal.
+Next, locate the example files/folders that you previously compressed in the [File Storage](#file-storage) step and when prompted, specify the location of your zip files on your local machine. Upon successfully completing the steps outlined, you will observe the examples appearing within the \"Network Types\" section of the NITA webapp portal.
 
 ![loaded examples](images/demo/demo_nwk_type_comp.png)
 
 Ensure to complete this action for **both** network types:
 
--   EVPN VXLAN demo
+-   EVPN VXLAN Example
 
--   eBGP WAN demo
+-   eBGP WAN Example
 
 ### Adding the Networks:
 Following a similar method used in the previous step we will now populate the network type generated above.\
@@ -132,8 +114,8 @@ After the completion of this stage each network should be populated similar to t
 
 ![configuration complete](images/demo/demo_cfg_added.png)
 
-## Initiate the "NOOB (New Out Of the Box)" process -- I think this section should just be removed and further context added later once we populate the examples? please confirm
-If you are setting up the system for a fresh VM or TIN/hardware installation, some projects may require you to carry out the NOOB Process, this "NOOB" process will configure a device via the console and proceed (if required) to upgrade the OS, but in both of our example projects (EVPN VXLAN and eBGP) this step is not used and can be skipped.
+## "NOOB (New Out Of the Box)" process
+Some projects may require you to carry out the NOOB (**N**ew **O**ut **O**f the **B**ox) Process if you are setting up the system from a newly installed VM or hardware installation, this "NOOB" process can configure a device via the console and proceed (if required) to upgrade the Juniper OS, but in the current examples this step is not used and can be skipped.
 
 ## Running the Build Process
 Now we have networks and configuration data for the nodes we can proceed to begin running the build process for each network (dc1, dc2, and wan), this stage is straightforward.\
@@ -202,3 +184,4 @@ As an illustration, a failure in a ROBOT test case executed against the \"Wan-Pe
 
 ![Expanded View of Jenkins Job](images/demo/demo_jenkins_results_expanded.png)
 
+***Thank you for reading, this concludes the overview of the NITA Examples.***

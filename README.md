@@ -25,7 +25,7 @@ Install system dependencies (y|n|q)? [n] y
 .
 .
 ```
-Answer ``Y`` for each action that you want to perform, ``N`` to skip and ``Q`` to quit out of the script completely. Most people will just need to enter ``Y`` and accept the defaults. Note that on a barebones Ubuntu system, you will need approximately 3GB of free storage in order to install NITA, which includes all of the system dependencies and the Kubernetes pods.
+Answer ``Y`` for each action that you want to perform, ``N`` to skip and ``Q`` to quit out of the script completely. Most people will just need to enter ``Y`` and accept the defaults. Note that on a barebones Ubuntu system, you will need approximately 15GB of free storage in order to install NITA, which includes all of the system dependencies and the Kubernetes pods.
 
 ## Environment Variables
 
@@ -66,7 +66,7 @@ Here is a short video declaring how NITA can be used in your project, please fol
 
 # Example Projects
 
-If you want to experiment to see what NITA can do, we currently have [3 example projects](https://github.com/Juniper/nita/tree/main/examples) that are provided in this repository:
+If you want to experiment to see what NITA can do, we currently have [3 example projects](https://github.com/Juniper/nita/tree/main/examples) that are provided in this repository, please proceed to review the [Examples README](https://github.com/Juniper/nita/tree/main/docs/nita-examples.md) to familiarise yourself with NITA Webapp usage:
 
 * [ChatGPT Integration with Robot and Jenkins](https://github.com/Juniper/nita/tree/main/examples/chatgpt).
 
