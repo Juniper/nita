@@ -38,9 +38,9 @@ The above directories are required to proceed with the Example - You will need a
 
 After you have cloned the repo to your local machine proceed to zip the example folders for upload into the NITA webapp - **ensure** to preserve the directories locally to make it easier to access some specific files used during the build process going forward.
 
-<span style="background-color: #f1f1f1">zip -r evpn\_vxlan\_erb\_dc [examples/evpn_vxlan_dc](https://github.com/Juniper/nita/tree/main/examples/evpn_vxlan_erb_dc)</span>
+```zip -r evpn_vxlan_erb_dc.zip examples/evpn_vxlan_erb_dc```
 
-<span style="background-color: #f1f1f1">zip -r ebgp\_wan [examples/ebgp\_wan](https://github.com/Juniper/nita/tree/main/examples/ebgp_wan)</span>
+```zip -r ebgp_wan.zip examples/ebgp_wan```
 
 By using the latest repo and following these steps will ensure that you have access to the most up-to-date examples ready for the lab build process in the next steps - please also note at this point that if you need to modify the relevant device data to accommodate your lab nodes you will need to refer to the [projects.md](https://github.com/Juniper/nita/blob/main/docs/projects.md) and follow the relevant instructions within.
 
