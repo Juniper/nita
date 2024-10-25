@@ -109,7 +109,7 @@ Debug "echo $NITAROOT $KUBEROOT $K8SROOT $PROXY $CERTS $JENKINS $KEYPASS $KUBECO
 
 ARCH=`uname -m`
 MEM=`free -g | grep Mem | awk '{print $2}'`
-DISK=`df -h --output='avail' /var | sed 1d | sed 's/.$//'`
+DISK=`df --block-size=G --output='avail' /var | sed 1d | sed 's/.$//'`
 OS=`hostnamectl | grep "Operating System" | awk '{print $3}'`
 
 Debug "echo The OS is ${OS}"
@@ -169,7 +169,7 @@ Question "Install system dependencies" && {
         if [ ! -x "$(command -v keytool)" ]; then
 
             echo "${ME}: Couldn't find \"keytool\" in your path, so downloading jdk to install it"
-            wget https://download.java.net/java/GA/jdk19.0.1/afdd2e245b014143b62ccb916125e3ce/10/GPL/openjdk-19.0.1_linux-x64_bin.tar.gz
+            wget https://download.java.net/java/GA/jdk19.0.1/afdd2e245b014143b62ccb916125e3ce/10/GPL/openjdk-19.0.1_linux-x64_bin.tar.gz --no-check-certificate
             tar xf openjdk-19.0.1_linux-x64_bin.tar.gz
             mv jdk-19.0.1 ${NITAROOT}
             rm -f openjdk-19.0.1_linux-x64_bin.tar.gz
