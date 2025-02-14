@@ -43,13 +43,13 @@ export OWNER_HOME=`egrep "^${REALUSER}" /etc/passwd | awk -F: '{print $6}'`
 export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS KEYPASS KUBECONFIG JAVA_HOME
 
 Question () {
+    DEFAULT_ANSWER="${2:-y}"
+    # Ask a yes/no/quit question. Default answer is "Yes" or what is given as a parameter 2
 
-    # Ask a yes/no/quit question. Default answer is "No"
-
-    echo -n "$1 (y|n|q)? [n] "
+    echo -n "$1 (y|n|q)? [$DEFAULT_ANSWER] "
 
     read ANSWER
-    ANSWER=${ANSWER:="n"}
+    ANSWER=${ANSWER:="$DEFAULT_ANSWER"}
 
     [ "X$ANSWER" = "Xy" ] || [ "X$ANSWER" = "XY" ] && {
         return 0
