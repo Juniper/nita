@@ -29,9 +29,10 @@ In this example, we'll create a custom Jenkins container so that we can take adv
 ```
 $ cd /opt/nita-jenkins
 $ sudo mv Dockerfile Dockerfile-
+$ sudo wget https://github.com/Juniper/nita/raw/refs/heads/main/examples/chatgpt/robot.jar
 $ sudo wget https://raw.githubusercontent.com/Juniper/nita/refs/heads/main/examples/chatgpt/Dockerfile
 ```
-Now change the tag number in the `build_container.sh` script. The  tag follows the `-t` argument to the `docker build` command. Each image needs its own unique tag. Make sure that whenever you build an image, if you want a new version you will have to remember to do this. For example, to change the tag to `25.01-01`, change the line to this:
+Now change the tag number in the `build_container.sh` script. The  tag follows the `-t` argument to the `docker build` command. Each image needs its own unique tag. Make sure that whenever you build an image, if you want a new version you will have to remember to do this. For example, edit the script and change the tag to `25.01-01`, change the line to this:
 
 ```
 docker build --build-arg KUBECTL_ARCH=${KUBECTL_ARCH} -t juniper/nita-jenkins:25.01-1 .
