@@ -26,8 +26,9 @@ $ cd /var/nita_project
 $ wget https://raw.githubusercontent.com/Juniper/nita/main/examples/chatgpt/js/openai.js
 $ wget https://raw.githubusercontent.com/Juniper/nita/main/examples/chatgpt/js/readfile.js
 $ nita-cmd jenkins cli root
-# mv /project/openai.js /var/jenkins_home/userContent/js
-# mv /project/readfile.js /var/jenkins_home/userContent/js
+# mkdir /var/jenkins_home/userContent/js
+# cp /project/openai.js /var/jenkins_home/userContent/js
+# cp /project/readfile.js /var/jenkins_home/userContent/js
 # exit
 ```
 
