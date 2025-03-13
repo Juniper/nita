@@ -73,7 +73,7 @@ OPENSSLDIR: "/usr/lib/ssl"
 
 There will be a ``certs`` directory under that (probably also linked to from ``/etc/ssl/certs``).
 
-After breaking the certificates down into their own individual files as described above, copy the files over to the appropriate directories:
+After breaking the certificates down into their own individual files as described above, copy the files over to the appropriate directories. For Ubuntu, it is:
 
 ```
 $ sudo cp -v Zscaler[0-2].pem /usr/local/share/ca-certificates
@@ -86,7 +86,13 @@ $ sudo cp -v Zscaler*.pem /usr/lib/ssl/certs
 'Zscaler2.pem' -> '/usr/lib/ssl/certs/Zscaler2.pem'
 ```
 
-Make sure that the files are world-readable (``chmod 644 <cert file>``) and that there is exactly one certificate per file. Now try the following:
+For AlmaLinux, the destination is different:
+
+```
+$ sudo cp -v Zscaler[0-2].pem /etc/pki/ca-trust/source/anchors
+```
+
+Make sure that the files are world-readable (``chmod 644 <cert file>``) and that there is exactly one certificate per file. Now reload the certificates. For Ubuntu, that is:
 
 ```
 $ sudo update-ca-certificates --fresh
@@ -97,7 +103,14 @@ rehash: warning: skipping ca-certificates.crt,it does not contain exactly one ce
 146 added, 0 removed; done.
 Running hooks in /etc/ca-certificates/update.d...
 done.
-``` 
+```
+
+For AlmaLinux, it will be:
+
+```
+$ sudo update-ca-trust
+```
+
 Once you have done this, running ``wget`` again without specifying the certificate as an argument should work just fine:
 
 ```
