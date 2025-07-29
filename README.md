@@ -1,4 +1,4 @@
-# NITA 23.12
+# Network Implementation and Test Automation (NITA) 23.12
 
 Welcome to NITA 23.12
 
