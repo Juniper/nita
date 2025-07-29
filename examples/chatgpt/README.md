@@ -11,28 +11,39 @@ What we will do is modify the results page of Robot tests which Jenkins serves t
 
 Follow the steps described in this README to install and edit the files necessary to make this work...
 
-## Step 1: The Robot Plugin Jar File
+## Step 1: Build a Custom Jenkins Container
 
-Refer to the [Creating Custom Containers](https://github.com/Juniper/nita/blob/main/docs/custom-containers.md) document for details on how to create a custom container for NITA. You can use the [Dockerfile](./Dockerfile) here to easily roll your own container.
+Refer to the [Creating Custom Containers](https://github.com/Juniper/nita/blob/main/docs/custom-containers.md) document for details on how to create a custom Jenkins container for NITA. You should use the [Dockerfile](./Dockerfile) in this repo to easily build your own container. It will copy the customised ![jenkins.sh](jenkins.sh) script into the new container, which will allow the Jenkins Java runtime to execute our customised ![robot.jar](https://raw.githubusercontent.com/Juniper/nita/main/examples/chatgpt/robot.jar) file.
 
-## Step 2: Copy Example JavaScript Files
+## Step 2: Get Persistent Files
 
-:bulb: Pro-Tip: The directory `/var/nita_project` on the host maps to `/project` in the Jenkins container, making it easy to move files between the host and the container.
+:bulb: Pro-Tip: The directory `/mnt/data` on the NITA host is used by Kubernetes as a "persistent volume" for the Jenkins pod, and it maps to `/var/jenkins_home` in the Jenkins container.
 
-Download the example JavaScript files provided in this repository (![readfile.js](js/readfile.js) and ![openai.js](js/openai.js)) and save them on the NITA host machine in the `/var/nita_project` directory. Then, in the Jenkins container, create a directory `/var/jenkins_home/userContent/js` and copy them across. Like this:
+This means that files stored under `/mnt/data` on the host are always accessible to the Jenkins container inside the Jenkins pod, and the files held therein persists through restarts of the pod. It also means that files stored under `/mnt/data` on the host take precedent (and overwrite) files stored there by the container. In a nutshell, if you want Jenkins to have access to files persistently, the way to do that is to store them under `/mnt/data` on the NITA host. We'll do this now...
+
+### Robot.jar File
+
+The `robot.jar` file is a Java Archive that has been customised to use a modified `failedCases.jelly` file. The modifications made to this file include new HTML to provide the artifacts described above (a button to load your API key, and links to custom JavaScript inside the "Failed Cases" table). You will need to download the `robot.jar` file from this repo and copy it to the appropriate directory as shown here:
 
 ```
-$ cd /var/nita_project
+$ wget https://raw.githubusercontent.com/Juniper/nita/main/examples/chatgpt/robot.jar
+$ sudo cp robot.jar /mnt/data/plugins/robot/WEB-INF/lib
+```
+:exclamation: Note that `/mnt/data/plugins/robot/WEB-INF/lib` on the NITA host maps to `/var/jenkins_home/plugins/robot/WEB-INF/lib` in the Jenkins container.
+
+### Copy JavaScript Files
+
+On the NITA host machine create a directory for JavaScript files under `/mnt/data/userContent/js`. Files placed here will be accessible to the Jenkins UI. Then download the JavaScript files provided in this repository (![readfile.js](js/readfile.js) and ![openai.js](js/openai.js)) and copy them across, like this:
+
+```
 $ wget https://raw.githubusercontent.com/Juniper/nita/main/examples/chatgpt/js/openai.js
 $ wget https://raw.githubusercontent.com/Juniper/nita/main/examples/chatgpt/js/readfile.js
-$ nita-cmd jenkins cli root
-# mkdir /var/jenkins_home/userContent/js
-# cp /project/openai.js /var/jenkins_home/userContent/js
-# cp /project/readfile.js /var/jenkins_home/userContent/js
-# exit
+$ sudo mkdir -p /mnt/data/userContent/js
+$ sudo cp openai.js /mnt/data/userConent/js
+$ sudo cp readfile.js /mnt/data/userContent/js
 ```
 
-You can either use the example Javascript files provided, or create your own, but they must go in the `/var/jenkins_home/userContent/js` directory in the Jenkins container.
+You can either use the example Javascript files provided in this repo or create your own, but they must go in the `/mnt/data/userContent/js` directory to be accessible to the Jenkins container.
 
 :warning: Note that the ![openai.js](js/openai.js) script permits a maximum of 400 tokens to be used in the exchange with AI, but you might want to adjust this to suit your needs and budget. Tokens are the currency commonly used by AI such as ChatGPT which you need to pay for - if you don't know what a token is, or how much it costs, check out the latest [OpenAI pricing page](https://openai.com/pricing) (for example).
 
