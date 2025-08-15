@@ -22,7 +22,7 @@ $ chmod 755 install.sh
 $ sudo -E ./install.sh
 [sudo] password for user:
 install.sh: NITA install script.
-Install system dependencies (y|n|q)? [n] y
+Install system dependencies (y|n|q)? [y]
 .
 .
 .
