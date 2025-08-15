@@ -27,7 +27,7 @@ Install system dependencies (y|n|q)? [y]
 .
 .
 ```
-Answer ``Y`` for each action that you want to perform, ``N`` to skip and ``Q`` to quit out of the script completely. Most people will just need to enter ``Y`` and accept the defaults. Note that on a barebones Ubuntu system, you will need approximately 15GB of free storage in order to install NITA, which includes all of the system dependencies and the Kubernetes pods.
+Answer ``Y`` for each action that you want to perform, ``N`` to skip and ``Q`` to quit out of the script completely. Most people will just need to press enter (for ``Y``) and accept the defaults. Note that on a barebones system, you will need approximately 8GB of free storage in order to install NITA, which includes all of the system dependencies and the Kubernetes pods.
 
 ## Environment Variables
 
