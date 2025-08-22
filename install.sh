@@ -448,10 +448,45 @@ Question "Do you want to run Ansible as a standalone Docker container" && {
 
 }
 
+Question "Do you want to install standalone yaml-to-excel tools" && {
+
+    # These are python scripts, so we need python and pip first
+
+    if [ ! -x "$(command -v pip3)" ]; then
+
+        # Pip3 isn't installed
+
+        if [ ! -x "$(command -v python3)" ]; then
+
+            # Python isn't installed either
+
+            eval "${INSTALLER} python3"
+
+        fi
+
+        eval "${INSTALLER} python3-pip"
+
+    fi
+
+    # Now download and install the latest yaml-to-excel release from GitHub
+
+    wget https://github.com/Juniper/nita-yaml-to-excel/archive/refs/heads/main.zip
+    unzip main.zip
+    pip3 install ./nita-yaml-to-excel-main/ --target /opt/nita-yaml-to-excel
+
+    # Clean up
+
+    rm -rf main.zip nita-yaml-to-excel-main
+
+    echo "export PYTHONPATH=/opt/nita-yaml-to-excel:${PYTHONPATH}" >> ${OWNER_HOME}/.bashrc
+    echo "export PATH=\${PATH}:/opt/nita-yaml-to-excel/bin"  >> ${OWNER_HOME}/.bashrc
+
+}
+
 Debug "ls -al ${NITAROOT}"
 
 echo "${ME}: NITA installation has finished."
 echo ""
-echo "${ME}: Remember to ${bold}source your bashrc file${normal} to set KUBECONFIG in your shell"
+echo "${ME}: Remember to ${bold}source your bashrc file${normal} to set environment variables in your shell"
 echo "${ME}: You can access the NITA webapp at https://${HOST}:443"
 echo "${ME}: You can access the Jenkins UI at https://${HOST}:8443"

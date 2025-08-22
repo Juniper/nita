@@ -17,15 +17,17 @@ For a list of previous features, bug fixes and other release details, please loo
 A new ``install.sh`` script is provided with this release, which makes it easy to install everything that you need in one go. It should work for most people in most cases, if you are running either Ubuntu 22.04 LTS or AlmaLinux 9.3 Server. Because the script can install required system dependencies you will need super user access to run it, either as ``root`` or as a user with ``sudo`` privileges. Simply download the raw script file from this GitHub repository, make it executable and then run it like this:
 
 ```
+$ wget https://raw.githubusercontent.com/Juniper/nita/refs/heads/main/install.sh
+$ chmod 755 install.sh
 $ sudo -E ./install.sh
 [sudo] password for user:
 install.sh: NITA install script.
-Install system dependencies (y|n|q)? [n] y
+Install system dependencies (y|n|q)? [y]
 .
 .
 .
 ```
-Answer ``Y`` for each action that you want to perform, ``N`` to skip and ``Q`` to quit out of the script completely. Most people will just need to enter ``Y`` and accept the defaults. Note that on a barebones Ubuntu system, you will need approximately 15GB of free storage in order to install NITA, which includes all of the system dependencies and the Kubernetes pods.
+Answer ``Y`` for each action that you want to perform, ``N`` to skip and ``Q`` to quit out of the script completely. Most people will just need to press enter (for ``Y``) and accept the defaults. Note that on a barebones system, you will need approximately 8GB of free storage in order to install NITA, which includes all of the system dependencies and the Kubernetes pods.
 
 ## Environment Variables
 
