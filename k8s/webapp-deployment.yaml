@@ -31,7 +31,7 @@ spec:
           env:
             - name: DJANGO_LOG_LEVEL
               value: DEBUG
-          image: juniper/nita-webapp:22.8-1
+          image: juniper/nita-webapp:25.10-1
           name: webapp
           resources: {}
       restartPolicy: Always
