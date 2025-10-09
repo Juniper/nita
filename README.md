@@ -182,6 +182,70 @@ proxy-cert-cm      2      52d
 proxy-config-cm    1      52d
 ```
 
+# Failure Dump configuration Fix for Nita
+
+In this section, we'll be going over a step by step tutorial on how to fix the dump configuration error: Failure, that pops up after running the action.
+
+Which should look like this:
+```
+Started by user unknown or anonymous
+Running as SYSTEM
+Building in workspace /project/ebgp_wan_0.3-WAN
+Copying file to data.json
+[ebgp_wan_0.3-WAN] $ /bin/sh -xe /tmp/jenkins12043159907366045566.sh
++ write_yaml_files.py
++ python3 create_ansible_job_k8s.py dump juniper/nita-ansible:22.8-2
++ kubectl apply -f dump.yaml
+job.batch/dump created
++ kubectl wait --for=jsonpath={.status.ready}=1 job/dump
+error: timed out waiting for the condition on jobs/dump
+Build step 'Execute shell' marked build as failure
+Finished: FAILURE
+```
+If you head over to the git bash shell and use the 'cd' (example: cd src) command into your src file to nita to examples and into the ebgp_wan file and type out:
+
+```
+$ vi dump.sh
+```
+
+and take a look at the file for dump and what it says, you'll notice at the bottom that it says 'Dos'
+which should look like this:
+
+```
+"dump.sh" [readonly][dos] 26L, 1163B
+```
+
+'dos' is meant to be 'unix'
+This little bit here is what is causing the Failure to happen, so in order to change 'dos' to 'unix' you will need to re-install git bash and git clone nita once again (make sure to install the right git bash version for your pc). Once you have the installer, open it and untick the 'only show new options' box, then click on next. You don't need to worry about the other things after that so you can click on next BUT once you get onto the 'Configuring the line ending conversions' bit MAKE SURE to tick the 'Checkout as-is, commit as-is' this means that any files that are installed on git will remain as it is instead of it getting converted into a different format, which in this case is 'dos'
+
+Since you have now ticked this box, you can now hit next on everything else and install git. Once this is installed you can now open git and 'cd' into your src folder (wherever that is located) and remove the nita folder/file using this command (MAKE SURE that this is typed out correctly and that there is no spaces in front of 'nita/' as this could delete your whole pc and thats not good):
+
+```
+$ rm -rf  nita/
+```
+
+After that is done you can now type out the git clone command:
+
+```
+$ git clone https://github.com/Juniper/nita.git
+```
+
+Once thats done head into the nita files into the ebgp_wan file, which is in examples, to check if 'dos' is now 'unix'
+to check the 'dump' file type out:
+
+```
+$ vi dump.sh
+```
+
+Which should open up the file and should look like this:
+
+```
+dump.sh [unix] (11:33 09/10/2025)                                             1,1 All
+"dump.sh" [unix] 26L, 1137B
+```
+
+After that is done you can head back to the NITA web app and remove the old WAN network and types and add in the new one that you have git cloned, once thats done you should be able to run the dump config with no failure whatsoever and thats how you fix this issue.
+
 # Getting Involved
 
 We hope that you enjoy using NITA, and if you do, please give the code a star on GitHub. If you spot anything wrong please raise an Issue and if you want to contribute please raise a Pull Request on the work that you have done. You can find out more details about how to contribute by reading the [CONTRIBUTE.md](CONTRIBUTE.md) document.
