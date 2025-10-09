@@ -182,11 +182,13 @@ proxy-cert-cm      2      52d
 proxy-config-cm    1      52d
 ```
 
-# Failure Dump configuration Fix for Nita
+# Troubleshooting
 
-In this section, we'll be going over a step by step tutorial on how to fix the dump configuration error: Failure, that pops up after running the action.
+## Windows CRLF problems
 
-Which should look like this:
+In this section, we'll be going over a step by step tutorial on how to fix a common faiure when loading Nita projects from windows. This issue manifests when triggering an action for example 'build'.
+
+Heres an example of the problem occuring during the dump action for the WAN example:
 ```
 Started by user unknown or anonymous
 Running as SYSTEM
@@ -202,7 +204,7 @@ error: timed out waiting for the condition on jobs/dump
 Build step 'Execute shell' marked build as failure
 Finished: FAILURE
 ```
-If you head over to the git bash shell and use the 'cd' (example: cd src) command into your src file to nita to examples and into the ebgp_wan file and type out:
+This occurs because windows uses a different format for text files. If you head over to the git bash shell and use the 'cd' (example: cd src) command into your src file to nita to examples and into the ebgp_wan file and type out:
 
 ```
 $ vi dump.sh
