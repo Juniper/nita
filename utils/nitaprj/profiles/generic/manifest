@@ -1,0 +1,21 @@
+#list of files to include into package archive
+#directories are included recursively
+
+ansible.cfg
+build
+build.sh
+build.yaml
+sites.yaml
+create_ansible_job_k8s.py
+group_vars
+hosts
+host_vars
+make_clean.yaml
+make_etc_hosts.yaml
+make_hosts_entry.sh
+output
+playbooks
+project.yaml
+README.md
+roles
+templates

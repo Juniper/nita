@@ -1,0 +1,2 @@
+#!/bin/sh
+docker --debug run --env-file .env  -u 0 -v /home/vpomuran/NITA-Mist/project_folder:/container_folder:rw  --rm  -it --name ansible juniper/nita-ansible-arm64:22.8-2 /bin/bash -c "cd /container_folder; ./runme.sh"

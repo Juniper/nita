@@ -1,0 +1,48 @@
+---
+OS_dir: /var/tmp/
+OS_package:
+OS_version: 20.1R1.11
+autonomous_system: 65200
+build_dir: /var/tmp/build
+final_push: 'False'
+gateway: 100.123.0.1
+junos_conf: '{{build_dir}}/{{ inventory_hostname }}/junos.conf'
+leaf_type: server
+log: '{{build_dir}}/ansible-run.log'
+log_dir: '{{build_dir}}/log'
+login_message: '***********************************************************************\nThis
+  system is restricted to __________, authorized users for legitimate\nbusiness purposes
+  only. All activity on the system will be logged and\nis subject to monitoring. Unauthorized
+  access, use or modification\nof computers, data therein or data in transit to or
+  from the computers\nis a violation of state and federal laws. Unauthorized activity
+  will\nbe reported to the law enforcement for investigation and possible\nprosecution.
+  __________ reserves the right to investigate, refer for\nprosecution and pursue
+  monetary damages in civil actions in the event\nof unauthorized access.\n***********************************************************************\n'
+loopback_subnet: 10.52.100.0/24
+nameserver: 100.123.0.1
+netbox_pass: Juniper!1
+netbox_site_name: WAN
+netbox_token: 8a099878e119b9e230b20cba3a091a5e9144bd40
+netbox_url: https://100.123.35.1
+netbox_user: netbox
+netconf_passwd: Juniper!1
+netconf_port: 22
+netconf_user: jcluser
+ntpserver: 100.123.0.1
+password_hashes:
+  netadmin_user: $1$a31gJmWG$h9ohikT1ajySf/tVH.gmv1
+  root_user: $1$DbZ1Q3pj$s48cZytjsmSJRUJAf4LdM.
+route_filter: 10.32.0.0/16
+routing_options:
+- destination: 100.123.0.1
+  static: 0.0.0.0/0
+snmp:
+  communities:
+  - name: public
+  contact: aburston@juniper.net
+  location: JCL Labs
+tmp_dir: '{{build_dir}}/{{inventory_hostname}}/tmp'
+vm_passwd: Juniper!1
+vm_user: root
+wait_time: 800
+xml_dir: '{{build_dir}}/{{ inventory_hostname }}/xml'

@@ -1,0 +1,14 @@
+[all:children]
+routers
+contrail
+build
+
+[routers]
+wan-pe1
+wan-pe2
+
+[contrail]
+healthbot
+
+[build]
+nita
