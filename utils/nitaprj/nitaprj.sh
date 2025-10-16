@@ -116,7 +116,7 @@ action_build() {
 	 mv $target_archive ${target_archive}.bak
     fi	    
     if [ -f ${xls_file} ] ; then
-	 mv  ${cls_file} ${cls_file}.bak
+	 mv  ${xls_file} ${xls_file}.bak
     fi	    
     $ZIP -r ${target_archive} -x "group_vars/env.y*" "*/__pycache__/*" "*.pyc" -@ < manifest
 
