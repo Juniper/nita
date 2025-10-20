@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERION=1.0
+SCRIPT_VERSION=1.1
 script_name=$(basename "$0")
 PROFILE_DIR=./profiles
 INNER_SCRIPT_NAME="nitaprj"
@@ -24,6 +24,16 @@ get_project_name() {
     fi
 }
 
+verify_zip_wget() {
+    if [ -z "$ZIP" ] ; then
+        echo "Error: zip command not found. Please install zip utility."
+        exit 1
+    fi
+    if [ -z "$WGET" ] ; then
+        echo "Error: wget command not found. Please install wget utility."
+        exit 1
+    fi
+}
 usage() {
     if [ ${script_name} == ${INNER_SCRIPT_NAME} ]; then
         usage_inner
@@ -149,9 +159,11 @@ action_build() {
 if [ -z "$1" ] ; then
     usage
 fi
-if [ ${script_name} != ${INNER_SCRIPT_NAME} ] && [ -z "$2" ]; then
+if [ $1 != 'version' ] && [ ${script_name} != ${INNER_SCRIPT_NAME} ] && [ -z "$2" ]; then
     usage
 fi
+
+verify_zip_wget
 
 case $1 in
     create)
