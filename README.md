@@ -206,7 +206,7 @@ Finished: FAILURE
 ```
 This occurs because windows uses a different format for text files.
 
-If you are editing files on a Windows platform, take care not to introduce DOS-style line endings. If you using git, the following command can be used to tell git not to use CRLF:
+If you are editing files on a Windows platform, take care not to introduce DOS-style line endings. If you're using git, the following command can be used to tell git not to use CRLF:
 
 ```
 $ git config --global core.autocrlf true
