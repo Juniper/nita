@@ -120,6 +120,7 @@ check_yaml2xls() {
             pip3 install ${PIPUNZIPDIR}/nita-yaml-to-excel-main/
             rm -rf ${PIPUNZIPDIR}
             rm -f $TARGET_FILE
+            YAML2XLS=`which yaml2xls.py`
         else
             echo "User refused to install yaml2xls.py. Stopping"
             exit 1	
