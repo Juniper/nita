@@ -182,6 +182,42 @@ proxy-cert-cm      2      52d
 proxy-config-cm    1      52d
 ```
 
+# Troubleshooting
+
+## Windows CRLF problems
+
+In this section, we'll be going over a step by step tutorial on how to fix a common faiure when loading Nita projects from windows. This issue manifests when triggering an action for example 'build'.
+
+Heres an example of the problem occuring during the dump action for the WAN example:
+```
+Started by user unknown or anonymous
+Running as SYSTEM
+Building in workspace /project/ebgp_wan_0.3-WAN
+Copying file to data.json
+[ebgp_wan_0.3-WAN] $ /bin/sh -xe /tmp/jenkins12043159907366045566.sh
++ write_yaml_files.py
++ python3 create_ansible_job_k8s.py dump juniper/nita-ansible:22.8-2
++ kubectl apply -f dump.yaml
+job.batch/dump created
++ kubectl wait --for=jsonpath={.status.ready}=1 job/dump
+error: timed out waiting for the condition on jobs/dump
+Build step 'Execute shell' marked build as failure
+Finished: FAILURE
+```
+This occurs because windows uses a different format for text files.
+
+If you are editing files on a Windows platform, take care not to introduce DOS-style line endings. If you're using git, the following command can be used to tell git not to use CRLF:
+
+```
+$ git config --global core.autocrlf true
+```
+
+If that doesn't work you could try installing this version of git: https://git-scm.com/install/windows
+
+Then you should make sure to follow this installation setup:
+
+Once you've downloaded the setup for git bash, run it, the main bit you would need to check for the installation is the "Configuring the line ending conversions" for this option you would need to tick the "Checkout as-is, committ as-is" this will stop the text files from changing and will stay as it is. When you've ticked that box, you don't need to change the other boxes, install git. After installing that you can start by removing NITA and git-cloning NITA again. Once thats done the problem should be fixed.
+
 # Getting Involved
 
 We hope that you enjoy using NITA, and if you do, please give the code a star on GitHub. If you spot anything wrong please raise an Issue and if you want to contribute please raise a Pull Request on the work that you have done. You can find out more details about how to contribute by reading the [CONTRIBUTE.md](CONTRIBUTE.md) document.
