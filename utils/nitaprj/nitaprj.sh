@@ -7,7 +7,11 @@ INNER_SCRIPT_NAME="nitaprj"
 DEPLOYMENT_DIR=./deploy
 ZIP=`which zip`
 WGET=`which wget`
+CURL=`which curl`
 YAML2XLS=`which yaml2xls.py`
+NITA_YAML_TO_EXCEL_URL="https://github.com/Juniper/nita-yaml-to-excel/archive/refs/heads/main.zip"
+#TARGET_FILE=${NITA_YAML_TO_EXCEL_URL##*/}
+TARGET_FILE=nita-yaml-to-excel.zip
 project_name=""
 
 get_project_name() {
@@ -24,13 +28,28 @@ get_project_name() {
     fi
 }
 
+fetch_file() {
+    url=$1
+    dest=$2
+    if [ -z "$WGET" ] ; then
+        if [ -z "$CURL" ] ; then
+            echo "Error: Neither wget nor curl command found. Please install wget or curl utility."
+            exit 1
+        else
+            $CURL -o $dest $url
+            return
+        fi    
+    fi
+    $WGET -O $dest $url
+}
+
 verify_zip_wget() {
     if [ -z "$ZIP" ] ; then
         echo "Error: zip command not found. Please install zip utility."
         exit 1
     fi
-    if [ -z "$WGET" ] ; then
-        echo "Error: wget command not found. Please install wget utility."
+    if [ -z "$WGET" ] && [ -z "CURL" ] ; then
+        echo "Error: wget or curl commands not found. Please install wget or curl utility."
         exit 1
     fi
 }
@@ -93,25 +112,15 @@ check_yaml2xls() {
    if which yaml2xls.py 1>/dev/null 2>&1 ; then
       :
    else
-     if ask "Missing yaml2xls.py. Cannot proceed without it. Do you want to install it?" ; then
-#        if pip3 list | grep -q openpyxl ; then
-#	   :
-#        else
-#            if ask "Missing openpyxl python module. Cannot proceed without it. Do you want to install it?" ; then
-#		pip3 insall openpyxl
-#            else
-#                echo "User refused to install openpyxl python. Stopping"
-#                exit 1		    
-#            fi		    
-#        fi	
-	$WGET https://github.com/Juniper/nita-yaml-to-excel/archive/refs/heads/main.zip
-	unzip main.zip
-	pip3 install ./nita-yaml-to-excel/
-	rm -rf ./nita-yaml-to-excel/
-     else
-        echo "User refused to install yaml2xls.py. Stopping"
-        exit 1	
-     fi	     
+        if ask "Missing yaml2xls.py. Cannot proceed without it. Do you want to install it?" ; then
+            fetch_file $NITA_YAML_TO_EXCEL_URL $TARGET_FILE
+            unzip ${TARGET_FILE}
+            pip3 install ./nita-yaml-to-excel/
+            rm -rf ./nita-yaml-to-excel/
+        else
+            echo "User refused to install yaml2xls.py. Stopping"
+            exit 1	
+        fi	     
    fi	   
 }
 action_build() {
