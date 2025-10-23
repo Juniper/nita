@@ -14,6 +14,7 @@ NITA_YAML_TO_EXCEL_URL="https://github.com/Juniper/nita-yaml-to-excel/archive/re
 TARGET_FILE=nita-yaml-to-excel.zip
 project_name=""
 TMPDIR=${TMPDIR:-/tmp}
+PIPUNZIPDIR=${TMPDIR}/pip-unzip
 
 get_project_name() {
    project_name=$1
@@ -115,9 +116,10 @@ check_yaml2xls() {
    else
         if ask "Missing yaml2xls.py. Cannot proceed without it. Do you want to install it?" ; then
             fetch_file $NITA_YAML_TO_EXCEL_URL $TARGET_FILE
-            unzip ${TARGET_FILE}
-            pip3 install ./nita-yaml-to-excel/
-            rm -rf ./nita-yaml-to-excel/
+            unzip -d ${PIPUNZIPDIR} ${TARGET_FILE}
+            pip3 install ${PIPUNZIPDIR}/nita-yaml-to-excel-main/
+            rm -rf ${PIPUNZIPDIR}
+            rm -f $TARGET_FILE
         else
             echo "User refused to install yaml2xls.py. Stopping"
             exit 1	
