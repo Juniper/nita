@@ -204,49 +204,19 @@ error: timed out waiting for the condition on jobs/dump
 Build step 'Execute shell' marked build as failure
 Finished: FAILURE
 ```
-This occurs because windows uses a different format for text files. If you head over to the git bash shell and use the 'cd' (example: cd src) command into your src file to nita to examples and into the ebgp_wan file and type out:
+This occurs because windows uses a different format for text files.
+
+If you are editing files on a Windows platform, take care not to introduce DOS-style line endings. If you using git, the following command can be used to tell git not to use CRLF:
 
 ```
-$ vi dump.sh
+$ git config --global core.autocrlf true
 ```
 
-and take a look at the file for dump and what it says, you'll notice at the bottom that it says 'Dos'
-which should look like this:
+If that doesn't work you could try installing this version of git: https://git-scm.com/install/windows
 
-```
-"dump.sh" [readonly][dos] 26L, 1163B
-```
+Then you should make sure to follow this installation setup:
 
-'dos' is meant to be 'unix'
-This little bit here is what is causing the Failure to happen, so in order to change 'dos' to 'unix' you will need to re-install git bash and git clone nita once again (make sure to install the right git bash version for your pc). Once you have the installer, open it and untick the 'only show new options' box, then click on next. You don't need to worry about the other things after that so you can click on next BUT once you get onto the 'Configuring the line ending conversions' bit MAKE SURE to tick the 'Checkout as-is, commit as-is' this means that any files that are installed on git will remain as it is instead of it getting converted into a different format, which in this case is 'dos'
-
-Since you have now ticked this box, you can now hit next on everything else and install git. Once this is installed you can now open git and 'cd' into your src folder (wherever that is located) and remove the nita folder/file using this command (MAKE SURE that this is typed out correctly and that there is no spaces in front of 'nita/' as this could delete your whole pc and thats not good):
-
-```
-$ rm -rf  nita/
-```
-
-After that is done you can now type out the git clone command:
-
-```
-$ git clone https://github.com/Juniper/nita.git
-```
-
-Once thats done head into the nita files into the ebgp_wan file, which is in examples, to check if 'dos' is now 'unix'
-to check the 'dump' file type out:
-
-```
-$ vi dump.sh
-```
-
-Which should open up the file and should look like this:
-
-```
-dump.sh [unix] (11:33 09/10/2025)                                             1,1 All
-"dump.sh" [unix] 26L, 1137B
-```
-
-After that is done you can head back to the NITA web app and remove the old WAN network and types and add in the new one that you have git cloned, once thats done you should be able to run the dump config with no failure whatsoever and thats how you fix this issue.
+Once you've downloaded the setup for git bash, run it, the main bit you would need to check for the installation is the "Configuring the line ending conversions" for this option you would need to tick the "Checkout as-is, committ as-is" this will stop the text files from changing and will stay as it is. When you've ticked that box, you don't need to change the other boxes, install git. After installing that you can start by removing NITA and git-cloning NITA again. Once thats done the problem should be fixed.
 
 # Getting Involved
 
