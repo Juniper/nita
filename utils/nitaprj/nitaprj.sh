@@ -13,6 +13,7 @@ NITA_YAML_TO_EXCEL_URL="https://github.com/Juniper/nita-yaml-to-excel/archive/re
 #TARGET_FILE=${NITA_YAML_TO_EXCEL_URL##*/}
 TARGET_FILE=nita-yaml-to-excel.zip
 project_name=""
+TMPDIR=${TMPDIR:-/tmp}
 
 get_project_name() {
    project_name=$1
@@ -142,11 +143,12 @@ action_build() {
     # workaround to make sure env variables are replaced with "XXXXXXXXX"
     # to prevent accidental credential leak
     # backup env.yaml to tmp 
-    rm -rf /tmp/nitaprj.tmp
-    mkdir /tmp/nitaprj.tmp
-    cp group_vars/env.y* /tmp/nitaprj.tmp
+    NITATMP=${TMPDIR}/nitaprj.tmp
+    rm -rf $NITATMP
+    mkdir $NITATMP
+    cp group_vars/env.y* $NITATMP/
     # replace existing env.yaml with scrubbed version
-    for f in /tmp/nitaprj.tmp/env.y* ; do
+    for f in $NITATMP/env.y* ; do
      f_base=`basename $f`
      cat $f | sed -E 's/^( .+\:).+/\1 XXXXXXX/' > group_vars/${f_base}
     done	    
@@ -154,8 +156,8 @@ action_build() {
     $YAML2XLS group_vars/* host_vars/* ${project_name}.xlsx
 
     #return original env.yaml
-    cp /tmp/nitaprj.tmp/env.y* group_vars
-    rm -rf  /tmp/nitaprj.tmp
+    cp $NITATMP/env.y* group_vars
+    rm -rf  $NITATMP
     echo "Build completed. Project file is $(pwd)/${target_archive}"
     echo "           Variable xlsx file is $(pwd)/${xls_file}"
     if [ ${script_name} != ${INNER_SCRIPT_NAME} ]; then
