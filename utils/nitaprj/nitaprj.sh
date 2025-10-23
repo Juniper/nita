@@ -37,7 +37,7 @@ fetch_file() {
             echo "Error: Neither wget nor curl command found. Please install wget or curl utility."
             exit 1
         else
-            $CURL -o $dest $url
+            $CURL -L -o $dest $url
             return
         fi    
     fi
