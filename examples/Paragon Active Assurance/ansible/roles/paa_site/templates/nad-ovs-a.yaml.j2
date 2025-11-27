@@ -1,0 +1,26 @@
+\
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: ovs-vlan-a
+  namespace: {{ paa_namespace }}
+  annotations:
+    k8s.v1.cni.cncf.io/resourceName: {{ ovs_cni_resource }}
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "ovs-vlan-a",
+      "plugins": [
+        {
+          "type": "ovs",
+          "vlan": {{ vlan_a }},
+          "bridge": "{{ ovs_bridge }}",
+          "ipam": {
+            "type": "whereabouts",
+            "range": "{{ ipam_a_cidr }}",
+            "exclude": {{ ipam_excludes | to_json }}
+          }
+        }
+      ]
+    }

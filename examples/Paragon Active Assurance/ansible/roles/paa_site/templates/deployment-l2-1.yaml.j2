@@ -1,0 +1,90 @@
+\
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paa-agent-l2-1
+  namespace: {{ paa_namespace }}
+  labels:
+    app: paa-agent-l2-1
+spec:
+  replicas: {{ replicas_l2_1 }}
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: paa-agent-l2-1
+  template:
+    metadata:
+      labels:
+        app: paa-agent-l2-1
+      annotations:
+        k8s.v1.cni.cncf.io/networks: "{{ paa_namespace }}/ovs-vlan-a, {{ paa_namespace }}/ovs-vlan-b"
+    spec:
+      serviceAccountName: {{ paa_service_account }}
+      nodeSelector: {}
+      tolerations: []
+      volumes:
+        - name: config-volume
+          configMap:
+            name: paa-agent-config
+            optional: true
+      initContainers:
+        - name: paa-agent-register
+          image: "{{ paa_image_repo }}:{{ paa_image_tag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["/paa-test-agent-application/paa-register"]
+          args:
+            - "register"
+            - "-c"
+            - "/config/agent.conf"
+            - "--host"
+            - "$(HOST)"
+            - "--account"
+            - "$(ACCOUNT)"
+            - "--token"
+            - "$(TOKEN)"
+            - "--tls-no-check"
+            - "--name=$(MY_POD_NAME)-$(MY_NODE_NAME)-l2-1"
+          env:
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: ACCOUNT
+              valueFrom:
+                secretKeyRef:
+                  name: paa-user
+                  key: ACCOUNT
+            - name: TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: paa-user
+                  key: TOKEN
+            - name: HOST
+              valueFrom:
+                secretKeyRef:
+                  name: paa-user
+                  key: HOST
+          volumeMounts:
+            - mountPath: /config
+              name: config-volume
+      containers:
+        - name: paa-agent
+          image: "{{ paa_image_repo }}:{{ paa_image_tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6800
+          command: ["/paa-test-agent-application/paa-test-agent-application","-c","/config/agent.conf"]
+          resources:
+            requests:
+              cpu: "{{ resources.l2.requests.cpu }}"
+              memory: "{{ resources.l2.requests.memory }}"
+            limits:
+              cpu: "{{ resources.l2.limits.cpu }}"
+              memory: "{{ resources.l2.limits.memory }}"
+          volumeMounts:
+            - mountPath: /config
+              name: config-volume

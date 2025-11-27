@@ -1,0 +1,95 @@
+---
+- name: Deploy PAA single-site standard
+  hosts: local
+  gather_facts: false
+  vars_files:
+    - group_vars/site.yml
+  tasks:
+    - name: Ensure namespace exists
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ paa_namespace }}"
+
+    - name: Create ServiceAccount
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: "{{ paa_service_account }}"
+            namespace: "{{ paa_namespace }}"
+
+    - name: Bind ServiceAccount to cluster-admin (adjust to least-priv in prod)
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        definition:
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRoleBinding
+          metadata:
+            name: "paa-full-control"
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: cluster-admin
+          subjects:
+            - kind: ServiceAccount
+              name: "{{ paa_service_account }}"
+              namespace: "{{ paa_namespace }}"
+
+    - name: Create Secret with PAA Control Center credentials
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: paa-user
+            namespace: "{{ paa_namespace }}"
+          type: Opaque
+          stringData:
+            ACCOUNT: "{{ paa_account }}"
+            TOKEN: "{{ paa_token }}"
+            HOST: "{{ paa_host }}"
+
+    - name: Create NetworkAttachmentDefinitions (OVS + Whereabouts) when enabled
+      when: networks_enabled | bool
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        template: "roles/paa_site/templates/nad-ovs-a.yaml.j2"
+
+    - name: Create NetworkAttachmentDefinitions B (OVS + Whereabouts) when enabled
+      when: networks_enabled | bool
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        template: "roles/paa_site/templates/nad-ovs-b.yaml.j2"
+
+    - name: Deploy PAA L2 Agent 0
+      when: networks_enabled | bool
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        template: "roles/paa_site/templates/deployment-l2-0.yaml.j2"
+
+    - name: Deploy PAA L2 Agent 1
+      when: networks_enabled | bool
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        template: "roles/paa_site/templates/deployment-l2-1.yaml.j2"
+
+    - name: Deploy PAA L3 Agent
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k8s_kubeconfig }}"
+        state: present
+        template: "roles/paa_site/templates/deployment-l3.yaml.j2"
