@@ -186,7 +186,7 @@ proxy-config-cm    1      52d
 
 ## Windows CRLF problems
 
-In this section, we'll be going over a step by step tutorial on how to fix a common faiure when loading Nita projects from windows. This issue manifests when triggering an action for example 'build'.
+In this section, we'll be going over a step by step tutorial on how to fix a common failure when loading Nita projects from windows. This issue manifests when triggering an action for example 'build'.
 
 Heres an example of the problem occuring during the dump action for the WAN example:
 ```
@@ -209,14 +209,14 @@ This occurs because windows uses a different format for text files.
 If you are editing files on a Windows platform, take care not to introduce DOS-style line endings. If you're using git, the following command can be used to tell git not to use CRLF:
 
 ```
-$ git config --global core.autocrlf true
+$ git config --global core.autocrlf false
 ```
 
 If that doesn't work you could try installing this version of git: https://git-scm.com/install/windows
 
 Then you should make sure to follow this installation setup:
 
-Once you've downloaded the setup for git bash, run it, the main bit you would need to check for the installation is the "Configuring the line ending conversions" for this option you would need to tick the "Checkout as-is, committ as-is" this will stop the text files from changing and will stay as it is. When you've ticked that box, you don't need to change the other boxes, install git. After installing that you can start by removing NITA and git-cloning NITA again. Once thats done the problem should be fixed.
+Once you've downloaded the setup for git bash, run it, the main bit you would need to check for the installation is the "Configuring the line ending conversions" for this option you would need to tick the "Checkout as-is, commit as-is" this will stop the text files from changing and will stay as it is. When you've ticked that box, you don't need to change the other boxes, install git. After installing that you can start by removing NITA and git-cloning NITA again. Once thats done the problem should be fixed.
 
 # Getting Involved
 
