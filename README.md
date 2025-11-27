@@ -186,7 +186,7 @@ proxy-config-cm    1      52d
 
 ## Windows CRLF problems
 
-In this section, we'll be going over a step by step tutorial on how to fix a common faiure when loading Nita projects from windows. This issue manifests when triggering an action for example 'build'.
+In this section, we'll be going over a step by step tutorial on how to fix a common failure when loading Nita projects from windows. This issue manifests when triggering an action for example 'build'.
 
 Heres an example of the problem occuring during the dump action for the WAN example:
 ```
