@@ -18,7 +18,7 @@ paa_image_tag: "4.4.3.26"
 # Replica counts
 replicas_l2_0: 1
 replicas_l2_1: 1
-replicas_l3: 1
+replicas_l3: 2
 
 # Resource requests/limits (tune per cluster capacity)
 resources:
@@ -39,7 +39,7 @@ resources:
 
 # Multus/NetworkAttachmentDefinitions for L2 traffic (optional).
 # If your cluster lacks OVS-CNI + Whereabouts, set networks_enabled to false.
-networks_enabled: true
+networks_enabled: false
 
 # Name of the OVS-CNI resource and bridge
 ovs_cni_resource: "ovs-cni.network.kubevirt.io/br1"
