@@ -1,0 +1,59 @@
+# === Paragon Active Assurance - Single Site (Standardized) ===
+# Fill in your PAA credentials and endpoint
+paa_namespace: "paa"
+paa_service_account: "paa-sa"
+
+# Where your kubeconfig resides
+k8s_kubeconfig: "~/.kube/config"
+
+# PAA Control Center credentials (create a user with API access)
+paa_account: "CHANGE_ME_ACCOUNT"
+paa_token: "CHANGE_ME_TOKEN"
+paa_host: "https://paa.example.com"  # e.g., https://control.netrounds.com (if you have SaaS)
+
+# Container image for the Test Agent (public Docker Hub image)
+paa_image_repo: "netrounds/test-agent-application"
+paa_image_tag: "4.4.3.26"
+
+# Replica counts
+replicas_l2_0: 1
+replicas_l2_1: 1
+replicas_l3: 2
+
+# Resource requests/limits (tune per cluster capacity)
+resources:
+  l3:
+    requests:
+      cpu: "2"
+      memory: "2Gi"
+    limits:
+      cpu: "8"
+      memory: "8Gi"
+  l2:
+    requests:
+      cpu: "2"
+      memory: "2Gi"
+    limits:
+      cpu: "8"
+      memory: "8Gi"
+
+# Multus/NetworkAttachmentDefinitions for L2 traffic (optional).
+# If your cluster lacks OVS-CNI + Whereabouts, set networks_enabled to false.
+networks_enabled: false
+
+# Name of the OVS-CNI resource and bridge
+ovs_cni_resource: "ovs-cni.network.kubevirt.io/br1"
+ovs_bridge: "br1"
+
+# VLANs and IPAM ranges for two L2 networks (A and B).
+# Choose ranges that are unused in your environment.
+vlan_a: 1101
+vlan_b: 1102
+ipam_a_cidr: "192.168.210.0/24"
+ipam_b_cidr: "192.168.211.0/24"
+ipam_excludes:
+  - "192.168.210.1/32"
+  - "192.168.211.1/32"
+
+# If your cluster uses SR-IOV you can extend this role,
+# but this package defaults to NON-SR-IOV (pure OVS Multus example).
