@@ -33,6 +33,10 @@ K8SROOT=${K8SROOT:=$NITAROOT/nita/k8s}
 PROXY=${PROXY:=$K8SROOT/proxy}
 CERTS=${CERTS:=$PROXY/certificates}
 JENKINS=${JENKINS:=/var/jenkins_home}
+JUNOS_MCP_DEVICES=${JUNOS_MCP_DEVICES:=$NITAROOT/nita/examples/mcp/devices.json}
+JUNOS_MCP_REPO=${JUNOS_MCP_REPO:=$NITAROOT/junos-mcp-server}
+JUNOS_MCP_IMAGE=${JUNOS_MCP_IMAGE:=junos-mcp-server:local}
+JUNOS_MCP_IMAGE_ARCHIVE=${JUNOS_MCP_IMAGE_ARCHIVE:=/tmp/junos-mcp-server-local.tar}
 KEYPASS=${KEYPASS:="nita123"}
 
 KUBEROOT=${KUBEROOT:=/etc/kubernetes}
@@ -40,7 +44,7 @@ KUBECONFIG=${KUBECONFIG:=$KUBEROOT/admin.conf}
 
 PATH=${PATH}:${JAVA_HOME}/bin
 export OWNER_HOME=`egrep "^${REALUSER}" /etc/passwd | awk -F: '{print $6}'`
-export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS KEYPASS KUBECONFIG JAVA_HOME
+export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_REPO JUNOS_MCP_IMAGE JUNOS_MCP_IMAGE_ARCHIVE KEYPASS KUBECONFIG JAVA_HOME
 
 ANSIBLE_IMAGE="ghcr.io/juniper/nita-ansible:latest"
 ROBOT_IMAGE="ghcr.io/juniper/nita-robot:latest"
@@ -437,6 +441,67 @@ Question "Install NITA repositories" && {
     echo "${ME}: Now ${bold}source your bashrc file${normal} to set KUBECONFIG in your shell"
 
 }
+
+# ------------------------------------------------------------------------------
+
+Question "Install Junos MCP server pod on port 8090" && {
+
+    LOCAL_SCRIPT_DIR="$(dirname $(realpath $0))"
+
+    # If the devices file isn't at the install target yet, seed it from the local repo copy
+    LOCAL_MCP_DEVICES="${LOCAL_SCRIPT_DIR}/examples/mcp/devices.json"
+    if [ ! -f "${JUNOS_MCP_DEVICES}" ] && [ -f "${LOCAL_MCP_DEVICES}" ]; then
+        echo "${ME}: Seeding devices file from local repo to ${JUNOS_MCP_DEVICES}"
+        mkdir -p "$(dirname ${JUNOS_MCP_DEVICES})"
+        cp "${LOCAL_MCP_DEVICES}" "${JUNOS_MCP_DEVICES}"
+    fi
+
+    # If the k8s YAMLs aren't at the install target yet, copy them from the local repo
+    for YAML in junos-mcp-deployment.yaml junos-mcp-service.yaml; do
+        if [ ! -f "${K8SROOT}/${YAML}" ] && [ -f "${LOCAL_SCRIPT_DIR}/k8s/${YAML}" ]; then
+            echo "${ME}: Copying ${YAML} to ${K8SROOT}/"
+            mkdir -p "${K8SROOT}"
+            cp "${LOCAL_SCRIPT_DIR}/k8s/${YAML}" "${K8SROOT}/${YAML}"
+        fi
+    done
+
+    if [ ! -f "${JUNOS_MCP_DEVICES}" ]; then
+        echo "${ME}: Error: Cannot find default devices mapping file: ${JUNOS_MCP_DEVICES}"
+        echo "${ME}: Skipping Junos MCP server install."
+    else
+
+        if [ ! -d "${JUNOS_MCP_REPO}" ]; then
+            echo "${ME}: Cloning Junos MCP server repository to ${JUNOS_MCP_REPO}"
+            git clone https://github.com/Juniper/junos-mcp-server.git ${JUNOS_MCP_REPO}
+        else
+            echo "${ME}: Found existing Junos MCP repo at ${JUNOS_MCP_REPO}"
+        fi
+
+        echo "${ME}: Building local Junos MCP image ${JUNOS_MCP_IMAGE}"
+        docker build -t ${JUNOS_MCP_IMAGE} ${JUNOS_MCP_REPO}
+
+        echo "${ME}: Exporting image archive ${JUNOS_MCP_IMAGE_ARCHIVE}"
+        rm -f ${JUNOS_MCP_IMAGE_ARCHIVE}
+        docker save ${JUNOS_MCP_IMAGE} -o ${JUNOS_MCP_IMAGE_ARCHIVE}
+
+        echo "${ME}: Importing image into containerd for Kubernetes"
+        ctr -n k8s.io images import ${JUNOS_MCP_IMAGE_ARCHIVE}
+
+        echo "${ME}: Creating/refreshing Junos MCP devices config map from ${JUNOS_MCP_DEVICES}"
+        kubectl delete cm junos-mcp-devices-cm --namespace nita --ignore-not-found
+        kubectl create cm junos-mcp-devices-cm --from-file=devices.json=${JUNOS_MCP_DEVICES} --namespace nita
+
+        echo "${ME}: Applying Junos MCP server deployment and service"
+        kubectl apply -f ${K8SROOT}/junos-mcp-deployment.yaml
+        kubectl apply -f ${K8SROOT}/junos-mcp-service.yaml
+
+        echo "${ME}: Junos MCP server pod requested. Service endpoint is available on port 8090 inside namespace nita."
+
+    fi
+
+}
+
+# ------------------------------------------------------------------------------
 
 Question "Do you want to run Ansible as a standalone Docker container" && {
 

@@ -1,0 +1,218 @@
+{
+    "dc1-borderleaf1": {
+        "ip": "100.123.24.1",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-firewall1": {
+        "ip": "100.123.26.1",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-webserver": {
+        "ip": "100.123.20.1",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "wan-pe1": {
+        "ip": "100.123.1.0",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-appserver": {
+        "ip": "100.123.20.2",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-borderleaf2": {
+        "ip": "100.123.24.2",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-firewall2": {
+        "ip": "100.123.26.2",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "wan-pe2": {
+        "ip": "100.123.1.1",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-dbserver": {
+        "ip": "100.123.20.3",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-spine1": {
+        "ip": "100.123.24.3",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc2-firewall1": {
+        "ip": "100.123.26.3",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-spine2": {
+        "ip": "100.123.24.4",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc2-firewall2": {
+        "ip": "100.123.26.4",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc2-webserver1": {
+        "ip": "100.123.20.4",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-leaf1": {
+        "ip": "100.123.24.5",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc2-webserver2": {
+        "ip": "100.123.20.5",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-leaf2": {
+        "ip": "100.123.24.6",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc1-leaf3": {
+        "ip": "100.123.24.7",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc2-spine1": {
+        "ip": "100.123.24.8",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "dc2-spine2": {
+        "ip": "100.123.24.9",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "HelperVM": {
+        "ip": "100.123.0.8",
+        "port": 22,
+        "username": "root",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "IntGwy": {
+        "ip": "100.123.41.1",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "NITA": {
+        "ip": "100.123.0.16",
+        "port": 22,
+        "username": "jcluser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    },
+    "vLinuxSRV-A1": {
+        "ip": "100.123.42.1",
+        "port": 22,
+        "username": "labuser",
+        "auth": {
+            "type": "password",
+            "password": "Password"
+        }
+    }
+}

@@ -45,8 +45,61 @@ Environment Variable | Default Value | Meaning
 ``KEYPASS`` | ``nita123`` | Passkey used to create self-signed Jenkins keys
 ``KUBEROOT`` | ``/etc/kubernetes`` | System location for Kubernetes configuration
 ``KUBECONFIG`` | ``$KUBEROOT/admin.conf`` | Location of user's Kubernetes configuration
+``JUNOS_MCP_DEVICES`` | ``$NITAROOT/nita/examples/mcp/devices.json`` | Default device mapping file for optional Junos MCP server pod
+``JUNOS_MCP_REPO`` | ``$NITAROOT/junos-mcp-server`` | Location to clone Junos MCP server repository for local image build
 ``DEBUG`` | unset | Set it to true in the parent shell, to see additional output
 ``IGNORE_WARNINGS`` | unset | Set it to true in the parent shell if you want to install NITA and ignore any important warnings
+
+## Optional: Junos MCP Server
+
+NITA can optionally install a [Junos Model Context Protocol (MCP) server](https://github.com/Juniper/junos-mcp-server) as a Kubernetes pod that runs on port 8090. This MCP server provides a bridge between LLM-compatible clients (such as Claude Desktop or VSCode with GitHub Copilot) and Juniper Junos network devices.
+
+During the ``install.sh`` execution, you will be prompted:
+
+```
+Install Junos MCP server pod on port 8090 (y|n|q)? [y]
+```
+
+If you answer ``Y``, the installer will:
+
+1. Clone the Junos MCP server repository from GitHub to ``$JUNOS_MCP_REPO`` (default: ``/opt/junos-mcp-server``)
+2. Build a local Docker image named ``junos-mcp-server:local``
+3. Import the image into Kubernetes' containerd runtime
+4. Create a ConfigMap from the default device mapping file at ``$JUNOS_MCP_DEVICES`` (default: ``/opt/nita/examples/mcp/devices.json``)
+5. Deploy the MCP server pod and service in the ``nita`` namespace, listening on port 8090
+
+### Default Device List
+
+The Junos MCP server uses a default device list located at ``examples/mcp/devices.json``. This file contains sample device configurations that the MCP server can interact with. You can customize this list by:
+
+- Editing the file directly before installation
+- Providing an alternative file path via the ``JUNOS_MCP_DEVICES`` environment variable
+- Updating the ConfigMap after installation using:
+  ```
+  kubectl delete cm junos-mcp-devices-cm -n nita
+  kubectl create cm junos-mcp-devices-cm --from-file=devices.json=/path/to/your/devices.json -n nita
+  kubectl rollout restart deploy/junos-mcp -n nita
+  ```
+
+### Verifying the MCP Server
+
+After installation, verify that the Junos MCP server is running:
+
+```
+# Check deployment status
+kubectl -n nita get deploy junos-mcp -o wide
+
+# Check pod status
+kubectl -n nita get pods -l app=junos-mcp -o wide
+
+# Check service endpoint (accessible on node IP port 8090)
+kubectl -n nita get svc junos-mcp -o wide
+
+# View server logs
+kubectl -n nita logs deploy/junos-mcp --tail=100
+```
+
+The MCP server will be accessible at ``http://<node-ip>:8090/mcp/`` from any client on the network.
 
 # History
 

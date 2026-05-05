@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: nita
+  labels:
+    app: junos-mcp
+  name: junos-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: junos-mcp
+  template:
+    metadata:
+      labels:
+        app: junos-mcp
+    spec:
+      containers:
+        - name: junos-mcp
+          image: junos-mcp-server:local
+          imagePullPolicy: Never
+          command: ["python", "jmcp.py"]
+          args:
+            - "-f"
+            - "/app/config/devices.json"
+            - "-t"
+            - "streamable-http"
+            - "-H"
+            - "0.0.0.0"
+            - "-p"
+            - "8090"
+          ports:
+            - containerPort: 8090
+              hostPort: 8090
+              protocol: TCP
+          volumeMounts:
+            - name: devices-config
+              mountPath: /app/config/devices.json
+              subPath: devices.json
+      restartPolicy: Always
+      volumes:
+        - name: devices-config
+          configMap:
+            name: junos-mcp-devices-cm
+            items:
+              - key: devices.json
+                path: devices.json
