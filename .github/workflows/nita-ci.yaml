@@ -58,6 +58,8 @@ jobs:
         run: |
           failed=0
           for f in k8s/*.yaml; do
+            # calico.yaml is a redirect pointer, not a manifest — skip it
+            [[ "${f}" == "k8s/calico.yaml" ]] && continue
             echo "Validating ${f} ..."
             envsubst '${CONTAINER_REGISTRY}' < "${f}" \
               | kubeconform -strict -ignore-missing-schemas -summary - \
