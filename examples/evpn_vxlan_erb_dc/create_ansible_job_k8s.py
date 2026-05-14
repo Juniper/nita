@@ -9,11 +9,11 @@ if len(sys.argv) < 2:
     sys.exit(1)
 job_name = sys.argv[1]
 
-# insist on the user providing the image name as the second argument
-if len(sys.argv) < 3:
-    print("Must provide image name as the second argument")
-    sys.exit(1)
-image_name = sys.argv[2]
+# use image from argument, NITA_ANSIBLE_IMAGE env var, or built-in default
+if len(sys.argv) >= 3:
+    image_name = sys.argv[2]
+else:
+    image_name = os.environ.get('NITA_ANSIBLE_IMAGE', 'ghcr.io/juniper/nita-ansible:latest')
 
 # get path that is to be used inside the job for the working directory
 path = os.getcwd()

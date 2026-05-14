@@ -31,7 +31,7 @@ spec:
           env:
             - name: DJANGO_LOG_LEVEL
               value: DEBUG
-          image: ghcr.io/juniper/nita-webapp:latest
+          image: ${CONTAINER_REGISTRY}/nita-webapp:latest
           name: webapp
           resources: {}
       restartPolicy: Always
