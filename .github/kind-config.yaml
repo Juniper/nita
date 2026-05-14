@@ -2,14 +2,11 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
   - role: control-plane
-    # Remove the default control-plane taint so NITA workloads can schedule.
-    # This mirrors: kubectl taint nodes --all node-role.kubernetes.io/control-plane-
-    # which install.sh runs after kubeadm init.
-    kubeadmConfigPatches:
-      - |
-        kind: InitConfiguration
-        nodeRegistration:
-          taints: []
+    # Kind automatically removes the control-plane taint on single-node clusters
+    # so workloads can be scheduled. Do NOT add kubeadmConfigPatches to set
+    # taints: [] — that prevents the taint being added in the first place, then
+    # Kind's own post-init taint removal fails with "taint not found".
+    #
     # Bind host directories to the paths referenced by pv.yaml (/mnt/data)
     # and pv2.yaml (/mydatai2). Kind nodes are Docker containers, so extraMounts
     # make host paths (created in the CI step) visible inside the node where
