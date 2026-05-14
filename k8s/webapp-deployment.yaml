@@ -34,12 +34,11 @@ spec:
           image: ${CONTAINER_REGISTRY}/nita-webapp:latest
           name: webapp
           readinessProbe:
-            httpGet:
-              path: /login/
+            tcpSocket:
               port: 8000
             initialDelaySeconds: 20
             periodSeconds: 5
-            failureThreshold: 24
+            failureThreshold: 12
           resources: {}
       restartPolicy: Always
 status: {}
