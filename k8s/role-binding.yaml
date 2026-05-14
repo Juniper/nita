@@ -5,7 +5,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: internal-jenknis-pod
-    namespace: nita  
+    namespace: nita
 roleRef:
   kind: ClusterRole
   name: modify-pods

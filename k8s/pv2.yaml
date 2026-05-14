@@ -4,7 +4,7 @@ metadata:
   namespace: nita
   name: pv-volume
   labels:
-      type: local
+    type: local
 spec:
   storageClassName: manual
   capacity:

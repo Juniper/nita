@@ -38,7 +38,7 @@ spec:
           lifecycle:
             postStart:
               exec:
-                command: ["/bin/sh", "-c","keytool -import -keystore /opt/java/openjdk/lib/security/cacerts -file /var/jenkins_home/certificate/crt/jenkins.crt -keypass changeit -storepass changeit -noprompt"]
+                command: ["/bin/sh", "-c", "keytool -import -keystore /opt/java/openjdk/lib/security/cacerts -file /var/jenkins_home/certificate/crt/jenkins.crt -keypass changeit -storepass changeit -noprompt"]
           name: jenkins
           ports:
             - containerPort: 8443
@@ -53,7 +53,7 @@ spec:
             - mountPath: /var/jenkins_home
               name: jenkins-home
             - mountPath: /var/jenkins_home/certificate/crt
-              name: jenkins-crt   
+              name: jenkins-crt
       restartPolicy: Always
       volumes:
         - name: jenkins-crt
