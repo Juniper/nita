@@ -184,8 +184,48 @@ jobs:
       - name: Wait for db rollout
         run: kubectl rollout status deployment/db -n nita --timeout=3m
 
-      - name: Wait for webapp rollout
-        run: kubectl rollout status deployment/webapp -n nita --timeout=5m
+      - name: Wait for webapp rollout (with diagnostics)
+        run: |
+          echo "=== Initial webapp pod state ==="
+          kubectl get pods -n nita -l io.kompose.service=webapp -o wide
+
+          for i in $(seq 1 20); do
+            echo ""
+            echo "--- Poll ${i}/20 at $(date -u '+%H:%M:%S') ---"
+
+            POD=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+            PHASE=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                      -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "Unknown")
+            READY=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                      -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null || echo "false")
+            RESTARTS=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                         -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}' 2>/dev/null || echo "0")
+            STATE=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                      -o jsonpath='{.items[0].status.containerStatuses[0].state}' 2>/dev/null || echo "")
+
+            echo "Pod: ${POD} | Phase: ${PHASE} | Ready: ${READY} | Restarts: ${RESTARTS}"
+            echo "ContainerState: ${STATE}"
+
+            echo "-- Last 30 log lines --"
+            kubectl logs -n nita -l io.kompose.service=webapp --tail=30 2>/dev/null \
+              || echo "(no logs yet)"
+
+            if [[ "${READY}" == "true" ]]; then
+              echo "Webapp is ready!"
+              exit 0
+            fi
+            sleep 15
+          done
+
+          echo ""
+          echo "=== TIMEOUT: webapp did not become ready after 5 minutes ==="
+          echo "=== Pod description ==="
+          kubectl describe pods -n nita -l io.kompose.service=webapp
+          echo "=== Recent events ==="
+          kubectl get events -n nita --sort-by=.lastTimestamp \
+            --field-selector involvedObject.kind=Pod | tail -20
+          exit 1
 
       - name: Wait for proxy rollout
         run: kubectl rollout status deployment/proxy -n nita --timeout=3m
