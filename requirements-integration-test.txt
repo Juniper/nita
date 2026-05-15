@@ -1,0 +1,6 @@
+# Dependencies for the end-to-end integration test suite.
+# These tests hit a live NITA webapp over HTTP; no Django test runner is used.
+pytest>=8.0.0
+requests>=2.32.0
+openpyxl>=3.1.0
+PyYAML>=6.0.0

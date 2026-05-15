@@ -311,3 +311,47 @@ jobs:
             echo "=== Logs: ${pod} ==="
             kubectl logs -n nita "${pod}" --tail=60 || true
           done
+
+      # ---------------------------------------------------------------------------
+      # API integration tests — run against the deployed stack
+      # ---------------------------------------------------------------------------
+
+      - name: Set up Python for integration tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install integration-test dependencies
+        run: pip install -r requirements-integration-test.txt
+
+      - name: Start port-forward (webapp → localhost:8000)
+        run: |
+          kubectl port-forward svc/webapp 8000:8000 -n nita &
+          echo "PF_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Token invalid" \
+              http://localhost:8000/api/v1/networks/ 2>/dev/null || echo 000)
+            if [[ "$STATUS" == "401" || "$STATUS" == "403" ]]; then
+              echo "Webapp API is up (HTTP $STATUS)"
+              exit 0
+            fi
+            echo "  attempt $i: HTTP $STATUS, waiting..."
+            sleep 5
+          done
+          echo "ERROR: webapp API did not respond within 2.5 minutes"
+          exit 1
+
+      - name: Run pytest integration suite
+        env:
+          NITA_BASE_URL: http://localhost:8000
+          NITA_USER: vagrant
+          NITA_PASS: vagrant123
+        run: pytest -c pytest-integration.ini --tb=short -v
+
+      - name: Stop port-forward
+        if: always()
+        run: |
+          if [[ -n "${PF_PID:-}" ]]; then
+            kill "${PF_PID}" 2>/dev/null || true
+          fi
