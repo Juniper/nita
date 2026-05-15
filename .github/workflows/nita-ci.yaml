@@ -17,9 +17,6 @@ on:
       - ".github/workflows/nita-ci.yaml"
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 # ---------------------------------------------------------------------------
 # JOB 1 — Lint: validate YAML syntax and Kubernetes schemas
 # Fast, zero-cluster, runs on every push.
@@ -30,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       - name: Install tools (gettext for envsubst, yamllint, kubeconform)
         run: |
@@ -84,7 +81,7 @@ jobs:
       KEYPASS: nita123
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       # Set CONTAINER_REGISTRY to the repo owner's GHCR namespace (lowercased).
       # On the upstream repo this resolves to ghcr.io/aburston; on any fork it
@@ -320,7 +317,7 @@ jobs:
       # ---------------------------------------------------------------------------
 
       - name: Set up Python for integration tests
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
