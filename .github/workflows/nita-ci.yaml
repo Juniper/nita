@@ -333,11 +333,18 @@ jobs:
           exit 1
 
       - name: Run pytest integration suite
+        id: pytest
         env:
           NITA_BASE_URL: http://localhost:8000
           NITA_USER: vagrant
           NITA_PASS: vagrant123
         run: pytest -c pytest-integration.ini --tb=short -v
+
+      - name: Dump webapp logs on failure
+        if: failure() && steps.pytest.outcome == 'failure'
+        run: |
+          echo "=== webapp pod logs (last 100 lines) ==="
+          kubectl logs -n nita -l io.kompose.service=webapp --tail=100 2>/dev/null || true
 
       - name: Stop port-forward
         if: always()
