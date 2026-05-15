@@ -1,0 +1,313 @@
+name: NITA CI
+
+# Run on every push or PR that touches k8s manifests, the installer, or CI
+# config itself. Also available for manual dispatch.
+on:
+  push:
+    paths:
+      - "k8s/**"
+      - "install.sh"
+      - ".github/workflows/nita-ci.yaml"
+      - ".github/kind-config.yaml"
+      - ".github/scripts/**"
+  pull_request:
+    paths:
+      - "k8s/**"
+      - "install.sh"
+      - ".github/workflows/nita-ci.yaml"
+  workflow_dispatch:
+
+# ---------------------------------------------------------------------------
+# JOB 1 — Lint: validate YAML syntax and Kubernetes schemas
+# Fast, zero-cluster, runs on every push.
+# ---------------------------------------------------------------------------
+jobs:
+  lint:
+    name: Lint K8s Manifests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools (gettext for envsubst, yamllint, kubeconform)
+        run: |
+          sudo apt-get install -y --no-install-recommends gettext-base yamllint
+
+          KUBECONFORM_VERSION=v0.6.7
+          curl -sLo /tmp/kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          tar -xf /tmp/kubeconform.tar.gz -C /tmp
+          sudo mv /tmp/kubeconform /usr/local/bin/
+
+      # yamllint catches YAML syntax errors (tabs, duplicate keys, etc.).
+      # Uses a relaxed profile so kompose-generated metadata doesn't fail.
+      - name: YAML syntax check
+        run: |
+          yamllint \
+            -d "{extends: relaxed, rules: {line-length: {max: 250}, truthy: disable}}" \
+            k8s/*.yaml
+
+      # kubeconform validates against the official Kubernetes OpenAPI schemas.
+      # envsubst resolves ${CONTAINER_REGISTRY} before validation so the image
+      # field is a valid string. -ignore-missing-schemas skips calico CRDs.
+      - name: Kubernetes schema validation
+        env:
+          # Resolves to the repo owner's GHCR namespace so forks validate
+          # against their own registry without any config changes.
+          CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
+        run: |
+          failed=0
+          for f in k8s/*.yaml; do
+            # calico.yaml is a redirect pointer, not a manifest — skip it
+            [[ "${f}" == "k8s/calico.yaml" ]] && continue
+            echo "Validating ${f} ..."
+            envsubst '${CONTAINER_REGISTRY}' < "${f}" \
+              | kubeconform -strict -ignore-missing-schemas -summary - \
+              || failed=1
+          done
+          exit $failed
+
+# ---------------------------------------------------------------------------
+# JOB 2 — E2E on Kind: deploy NITA on a real (lightweight) Kubernetes cluster
+# Runs only after lint passes. Uses the same k8s/ manifests as production.
+# ---------------------------------------------------------------------------
+  e2e-kind:
+    name: E2E on Kind Cluster
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    env:
+      KEYPASS: nita123
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set CONTAINER_REGISTRY to the repo owner's GHCR namespace (lowercased).
+      # On the upstream repo this resolves to ghcr.io/aburston; on any fork it
+      # automatically resolves to ghcr.io/<fork-owner>. All images are public.
+      - name: Set container registry
+        run: |
+          echo "CONTAINER_REGISTRY=ghcr.io/$(echo '${{ github.repository_owner }}' \
+            | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      # gettext-base  — provides envsubst (used by apply-k8s.sh)
+      # openjdk-17-jdk — provides keytool (required by setup-configmaps.sh)
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            gettext-base \
+            openjdk-17-jdk
+
+      # Create the host-side directories that Kind will bind-mount into the
+      # node container. These paths match the hostPath values in pv.yaml and
+      # pv2.yaml. Jenkins also needs /var/nita_project for project file storage.
+      - name: Create host directories for PersistentVolume hostPaths
+        run: |
+          sudo mkdir -p /mnt/data /mydatai2 /var/nita_project
+          sudo chmod 777  /mnt/data /mydatai2 /var/nita_project
+
+      # helm/kind-action creates a Kind cluster using our config file.
+      # The config removes the control-plane taint (so pods can schedule on the
+      # single node) and mounts the hostPath directories created above.
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: nita
+          config: .github/kind-config.yaml
+
+      # Pre-pull images on the Docker daemon then load them directly into the
+      # Kind node. This avoids pull timeouts during the rollout wait steps.
+      - name: Pull and load container images into Kind
+        run: |
+          images=(
+            "mariadb:10.4.12"
+            "nginx:stable"
+            "${CONTAINER_REGISTRY}/nita-webapp:latest"
+            "${CONTAINER_REGISTRY}/nita-jenkins:latest"
+          )
+          for img in "${images[@]}"; do
+            echo "==> Pulling ${img}"
+            docker pull "${img}"
+            kind load docker-image "${img}" --name nita
+          done
+
+      # Apply resources with no ConfigMap dependencies first:
+      # namespace → storage (SC, PVs, PVCs) → RBAC
+      - name: Apply namespace, storage, and RBAC manifests
+        working-directory: k8s
+        run: |
+          kubectl apply -f nita-namespace.yaml
+          kubectl apply -f storageClass.yaml
+          kubectl apply -f pv.yaml
+          kubectl apply -f pv2.yaml
+          kubectl apply -f mariadb-persistentvolumeclaim.yaml
+          kubectl apply -f jenkins-home-persistentvolumeclaim.yaml
+          kubectl apply -f service-account.yaml
+          kubectl apply -f cluster-role.yaml
+          kubectl apply -f role-binding.yaml
+
+      # Generate self-signed certs and create the four ConfigMaps that the
+      # proxy and jenkins deployments mount. Must run before those deployments.
+      - name: Generate certificates and create ConfigMaps
+        run: bash .github/scripts/setup-configmaps.sh
+
+      # Apply deployments and services. Notes:
+      #   - webapp/jenkins use ${CONTAINER_REGISTRY} → envsubst required
+      #   - jenkins-service.yaml was exported from a live cluster and contains
+      #     a hardcoded clusterIP, clusterIPs block, resourceVersion and uid.
+      #     sed strips these fields so kubectl apply succeeds on a fresh cluster.
+      - name: Apply deployments and services
+        working-directory: k8s
+        run: |
+          kubectl apply -f db-service.yaml
+          envsubst '${CONTAINER_REGISTRY}' < db-deployment.yaml      | kubectl apply -f -
+
+          kubectl apply -f webapp-service.yaml
+          envsubst '${CONTAINER_REGISTRY}' < webapp-deployment.yaml   | kubectl apply -f -
+
+          # Clean live-cluster metadata from jenkins-service before applying
+          sed \
+            -e '/^  clusterIP:/d' \
+            -e '/^  clusterIPs:/d' \
+            -e '/^  - 10\.[0-9]/d' \
+            -e '/  resourceVersion:/d' \
+            -e '/  uid:/d' \
+            jenkins-service.yaml | kubectl apply -f -
+          envsubst '${CONTAINER_REGISTRY}' < jenkins-deployment.yaml  | kubectl apply -f -
+
+          envsubst '${CONTAINER_REGISTRY}' < proxy-deployment.yaml    | kubectl apply -f -
+
+      # ---------------------------------------------------------------------------
+      # Wait for each deployment to reach the Running/Ready state
+      # ---------------------------------------------------------------------------
+      - name: Wait for db rollout
+        run: kubectl rollout status deployment/db -n nita --timeout=3m
+
+      - name: Wait for webapp rollout (with diagnostics)
+        run: |
+          echo "=== Initial webapp pod state ==="
+          kubectl get pods -n nita -l io.kompose.service=webapp -o wide
+
+          for i in $(seq 1 20); do
+            echo ""
+            echo "--- Poll ${i}/20 at $(date -u '+%H:%M:%S') ---"
+
+            POD=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+            PHASE=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                      -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "Unknown")
+            READY=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                      -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null || echo "false")
+            RESTARTS=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                         -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}' 2>/dev/null || echo "0")
+            STATE=$(kubectl get pods -n nita -l io.kompose.service=webapp \
+                      -o jsonpath='{.items[0].status.containerStatuses[0].state}' 2>/dev/null || echo "")
+
+            echo "Pod: ${POD} | Phase: ${PHASE} | Ready: ${READY} | Restarts: ${RESTARTS}"
+            echo "ContainerState: ${STATE}"
+
+            echo "-- Last 30 log lines --"
+            kubectl logs -n nita -l io.kompose.service=webapp --tail=30 2>/dev/null \
+              || echo "(no logs yet)"
+
+            if [[ "${READY}" == "true" ]]; then
+              echo "Webapp is ready!"
+              exit 0
+            fi
+            sleep 15
+          done
+
+          echo ""
+          echo "=== TIMEOUT: webapp did not become ready after 5 minutes ==="
+          echo "=== Pod description ==="
+          kubectl describe pods -n nita -l io.kompose.service=webapp
+          echo "=== Recent events ==="
+          kubectl get events -n nita --sort-by=.lastTimestamp \
+            --field-selector involvedObject.kind=Pod | tail -20
+          exit 1
+
+      - name: Wait for proxy rollout
+        run: kubectl rollout status deployment/proxy -n nita --timeout=3m
+
+      # Jenkins is the slowest to start: keystore import in postStart + plugin loading
+      - name: Wait for jenkins rollout
+        run: kubectl rollout status deployment/jenkins -n nita --timeout=10m
+
+      # ---------------------------------------------------------------------------
+      # Smoke tests
+      # ---------------------------------------------------------------------------
+
+      - name: "Test: MariaDB 'Sites' database exists"
+        run: |
+          kubectl exec -n nita deployment/db -- \
+            mysql -u root -proot -e "SHOW DATABASES;" \
+            | grep -q "Sites"
+          echo "PASS: MariaDB Sites database confirmed"
+
+      - name: "Test: Webapp returns HTTP 200/301/302"
+        run: |
+          kubectl port-forward svc/webapp 8000:8000 -n nita &
+          PF_PID=$!
+          # Allow port-forward to establish
+          sleep 5
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+                   --max-time 10 http://localhost:8000/ 2>/dev/null || true)
+          kill "${PF_PID}" 2>/dev/null || true
+          echo "Webapp HTTP status: ${HTTP}"
+          # 000 means no TCP connection at all; anything else means Django is up
+          [[ "${HTTP}" != "000" ]] \
+            || { echo "FAIL: no HTTP response from webapp (connection refused)"; exit 1; }
+          echo "PASS: Webapp is serving HTTP (status ${HTTP})"
+
+      - name: "Test: Jenkins returns HTTP 200/401/403"
+        run: |
+          kubectl port-forward svc/jenkins 8080:8080 -n nita &
+          PF_PID=$!
+          sleep 5
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+                   --max-time 10 http://localhost:8080 || echo "000")
+          kill "${PF_PID}" 2>/dev/null || true
+          echo "Jenkins HTTP status: ${HTTP}"
+          [[ "${HTTP}" =~ ^(200|401|403)$ ]] \
+            || { echo "FAIL: unexpected status ${HTTP}"; exit 1; }
+          echo "PASS: Jenkins responded ${HTTP}"
+
+      - name: "Test: Jenkins ServiceAccount RBAC — list pods"
+        run: |
+          kubectl auth can-i list pods \
+            --as=system:serviceaccount:nita:internal-jenknis-pod \
+            -n nita | grep -q "yes"
+          echo "PASS: internal-jenknis-pod can list pods"
+
+      - name: "Test: Jenkins ServiceAccount RBAC — create/delete pods"
+        run: |
+          kubectl auth can-i create pods \
+            --as=system:serviceaccount:nita:internal-jenknis-pod \
+            -n nita | grep -q "yes"
+          kubectl auth can-i delete pods \
+            --as=system:serviceaccount:nita:internal-jenknis-pod \
+            -n nita | grep -q "yes"
+          echo "PASS: internal-jenknis-pod can create and delete pods"
+
+      # ---------------------------------------------------------------------------
+      # Always print pod status; print logs only on failure
+      # ---------------------------------------------------------------------------
+      - name: Pod and event summary
+        if: always()
+        run: |
+          echo "=== Pods ==="
+          kubectl get pods -n nita -o wide
+          echo ""
+          echo "=== Recent events ==="
+          kubectl get events -n nita \
+            --sort-by=.lastTimestamp | tail -25
+
+      - name: Container logs on failure
+        if: failure()
+        run: |
+          for pod in $(kubectl get pods -n nita -o name 2>/dev/null); do
+            echo ""
+            echo "=== Logs: ${pod} ==="
+            kubectl logs -n nita "${pod}" --tail=60 || true
+          done

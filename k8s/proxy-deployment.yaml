@@ -35,14 +35,14 @@ spec:
               protocol: TCP
           resources: {}
           volumeMounts:
-          - name: proxy-conf
-            mountPath: /etc/nginx/
-          - name: proxy-cert
-            mountPath: /etc/certificate/
-          - name: tmpfs-1
-            mountPath: /var/run
-          - name: tmpfs-2
-            mountPath: /var/cache/nginx
+            - name: proxy-conf
+              mountPath: /etc/nginx/
+            - name: proxy-cert
+              mountPath: /etc/certificate/
+            - name: tmpfs-1
+              mountPath: /var/run
+            - name: tmpfs-2
+              mountPath: /var/cache/nginx
       volumes:
         - name: proxy-conf
           configMap:

@@ -44,10 +44,17 @@ KUBECONFIG=${KUBECONFIG:=$KUBEROOT/admin.conf}
 
 PATH=${PATH}:${JAVA_HOME}/bin
 export OWNER_HOME=`egrep "^${REALUSER}" /etc/passwd | awk -F: '{print $6}'`
-export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_REPO JUNOS_MCP_IMAGE JUNOS_MCP_IMAGE_ARCHIVE KEYPASS KUBECONFIG JAVA_HOME
+export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_REPO JUNOS_MCP_IMAGE JUNOS_MCP_IMAGE_ARCHIVE KEYPASS KUBECONFIG JAVA_HOME CONTAINER_REGISTRY GITHUB_ORG NITA_ANSIBLE_IMAGE NITA_ROBOT_IMAGE
 
-ANSIBLE_IMAGE="ghcr.io/juniper/nita-ansible:latest"
-ROBOT_IMAGE="ghcr.io/juniper/nita-robot:latest"
+CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/juniper}
+GITHUB_ORG=${GITHUB_ORG:=Juniper}
+
+NITA_ANSIBLE_IMAGE="${CONTAINER_REGISTRY}/nita-ansible:latest"
+NITA_ROBOT_IMAGE="${CONTAINER_REGISTRY}/nita-robot:latest"
+
+# Aliases used by the standalone Docker container steps
+ANSIBLE_IMAGE="${NITA_ANSIBLE_IMAGE}"
+ROBOT_IMAGE="${NITA_ROBOT_IMAGE}"
 
 Question () {
     DEFAULT_ANSWER="${2:-y}"
@@ -361,7 +368,7 @@ Question "Install NITA repositories" && {
 
             echo "${ME}: Cloning fresh repository: ${REPO}"
 
-            git clone https://github.com/Juniper/${REPO}.git ${NITAROOT}/${REPO}
+            git clone https://github.com/${GITHUB_ORG}/${REPO}.git ${NITAROOT}/${REPO}
 
             # Make symbolic links for nita cli scripts...
 
@@ -393,7 +400,7 @@ Question "Install NITA repositories" && {
     bash apply-k8s.sh
 
     mkdir -p ${NITAROOT}/nita/k8s/proxy
-    wget --inet4-only https://raw.githubusercontent.com/Juniper/nita-webapp/main/nginx/nginx.conf -O ${PROXY}/nginx.conf
+    wget --inet4-only https://raw.githubusercontent.com/${GITHUB_ORG}/nita-webapp/main/nginx/nginx.conf -O ${PROXY}/nginx.conf
     # ln -s ${NITAROOT}/nita/k8s/proxy ${PROXY}/nginx.conf
 
     Debug "kubectl get nodes -o wide"

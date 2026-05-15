@@ -4,10 +4,10 @@ metadata:
   namespace: nita
   name: modify-pods
 rules:
-  - apiGroups: [""]  
+  - apiGroups: [""]
     resources:
       - pods/log
-      - jobs 
+      - jobs
     verbs:
       - get
       - list
@@ -22,11 +22,15 @@ rules:
       - create
       - update
       - patch
-      - delete      
+      - delete
   - apiGroups: [""]
     resources:
       - pods
     verbs:
       - get
       - list
+      - watch
+      - create
+      - update
+      - patch
       - delete

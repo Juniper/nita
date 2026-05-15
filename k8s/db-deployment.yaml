@@ -36,6 +36,15 @@ spec:
               value: root
           image: mariadb:10.4.12
           name: db
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - mysql -u root -proot -e "SELECT 1"
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
           resources: {}
           volumeMounts:
             - mountPath: /var/lib/mysql

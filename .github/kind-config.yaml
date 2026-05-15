@@ -1,0 +1,20 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    # Kind automatically removes the control-plane taint on single-node clusters
+    # so workloads can be scheduled. Do NOT add kubeadmConfigPatches to set
+    # taints: [] — that prevents the taint being added in the first place, then
+    # Kind's own post-init taint removal fails with "taint not found".
+    #
+    # Bind host directories to the paths referenced by pv.yaml (/mnt/data)
+    # and pv2.yaml (/mydatai2). Kind nodes are Docker containers, so extraMounts
+    # make host paths (created in the CI step) visible inside the node where
+    # the PersistentVolume hostPaths resolve.
+    extraMounts:
+      - hostPath: /mnt/data
+        containerPath: /mnt/data
+      - hostPath: /mydatai2
+        containerPath: /mydatai2
+      - hostPath: /var/nita_project
+        containerPath: /var/nita_project
