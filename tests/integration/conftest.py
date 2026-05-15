@@ -34,13 +34,13 @@ NITA_USER: str = os.environ.get("NITA_USER", "vagrant")
 NITA_PASS: str = os.environ.get("NITA_PASS", "vagrant123")
 
 # Fixture data directory.
-# _HERE = nita/tests/integration   → parents[2] = nita/
+# _HERE = nita/tests/integration   → parents[1] = nita/
 _HERE = pathlib.Path(__file__).resolve().parent
 _EVPN_FIXTURE_DIR_ENV = os.environ.get("EVPN_FIXTURE_DIR")
 if _EVPN_FIXTURE_DIR_ENV:
     FIXTURE_DIR = pathlib.Path(_EVPN_FIXTURE_DIR_ENV)
 else:
-    FIXTURE_DIR = _HERE.parents[2] / "examples" / "evpn_vxlan_erb_dc"
+    FIXTURE_DIR = _HERE.parents[1] / "examples" / "evpn_vxlan_erb_dc"
 
 
 # ---------------------------------------------------------------------------
