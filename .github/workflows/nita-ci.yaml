@@ -4,17 +4,7 @@ name: NITA CI
 # config itself. Also available for manual dispatch.
 on:
   push:
-    paths:
-      - "k8s/**"
-      - "install.sh"
-      - ".github/workflows/nita-ci.yaml"
-      - ".github/kind-config.yaml"
-      - ".github/scripts/**"
   pull_request:
-    paths:
-      - "k8s/**"
-      - "install.sh"
-      - ".github/workflows/nita-ci.yaml"
   workflow_dispatch:
 
 # ---------------------------------------------------------------------------
