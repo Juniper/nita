@@ -343,8 +343,10 @@ jobs:
       - name: Dump webapp logs on failure
         if: failure() && steps.pytest.outcome == 'failure'
         run: |
-          echo "=== webapp pod logs (last 100 lines) ==="
-          kubectl logs -n nita -l io.kompose.service=webapp --tail=100 2>/dev/null || true
+          echo "=== webapp pod logs (all) ==="
+          kubectl logs -n nita -l io.kompose.service=webapp --tail=500 2>/dev/null || true
+          echo "=== jenkins pod logs (last 100 lines) ==="
+          kubectl logs -n nita -l io.kompose.service=jenkins --tail=100 2>/dev/null || true
 
       - name: Stop port-forward
         if: always()
