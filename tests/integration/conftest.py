@@ -211,7 +211,7 @@ def screenshot_dir():
 
 
 @pytest.fixture(scope="session")
-def _browser_page():
+def _browser_page(screenshot_dir):
     """Session-scoped Playwright page pre-authenticated via a Django session cookie.
 
     Obtains a session cookie by POSTing to the admin login endpoint, using the
@@ -220,10 +220,21 @@ def _browser_page():
     Injects the session cookie into the Playwright browser context.
     Yields None if authentication fails or Playwright is unavailable so all
     tests continue to run unaffected.
+
+    Writes screenshot_dir/_login_debug.txt on every run so CI artifacts reveal
+    exactly why the browser session succeeded or failed.
     """
+    _debug = screenshot_dir / "_login_debug.txt"
+
+    def _log(*lines):
+        with _debug.open("a") as fh:
+            for line in lines:
+                fh.write(line + "\n")
+
     try:
         from playwright.sync_api import sync_playwright  # noqa: PLC0415
     except ImportError:
+        _log("playwright: ImportError — not installed")
         yield None
         return
 
@@ -231,14 +242,14 @@ def _browser_page():
     try:
         rs = requests.Session()
         login_url = f"{BASE_URL}/admin/login/"
+        _log(f"GET {login_url}")
         resp = rs.get(login_url, timeout=15)
+        _log(f"GET status: {resp.status_code}")
         resp.raise_for_status()
-        # Extract CSRF token from the rendered HTML form (more reliable than
-        # reading it from the csrftoken cookie, which may be absent on the
-        # first request when certain SameSite/Secure settings are active).
         m = re.search(r'name="csrfmiddlewaretoken"\s+value="([^"]+)"', resp.text)
         csrf = m.group(1) if m else rs.cookies.get("csrftoken", "")
-        rs.post(
+        _log(f"csrf from html: {'yes len=' + str(len(csrf)) if m else 'no, from cookie len=' + str(len(csrf))}")
+        post_resp = rs.post(
             login_url,
             data={
                 "username": NITA_USER,
@@ -250,8 +261,11 @@ def _browser_page():
             allow_redirects=True,
             timeout=15,
         )
+        _log(f"POST status: {post_resp.status_code}  final_url: {post_resp.url}")
         sessionid = rs.cookies.get("sessionid")
-    except Exception:
+        _log(f"sessionid: {'obtained' if sessionid else 'None — login failed'}")
+    except Exception as exc:
+        _log(f"login exception: {exc}")
         yield None
         return
 
@@ -268,10 +282,12 @@ def _browser_page():
                 [{"name": "sessionid", "value": sessionid, "url": BASE_URL}]
             )
             page = context.new_page()
+            _log("playwright: browser launched and cookie injected")
             yield page
             context.close()
             browser.close()
-    except Exception:
+    except Exception as exc:
+        _log(f"playwright exception: {exc}")
         yield None
 
 
@@ -306,9 +322,13 @@ def _screenshot_on_pass(request, _browser_page, screenshot_dir):
         _browser_page.goto(
             BASE_URL + url, wait_until="domcontentloaded", timeout=10_000
         )
-        _browser_page.wait_for_load_state("networkidle", timeout=5_000)
     except Exception:
         return
+    # Give the page a moment to settle; a networkidle timeout is not fatal.
+    try:
+        _browser_page.wait_for_load_state("networkidle", timeout=5_000)
+    except Exception:
+        pass
 
     safe = re.sub(r"[^\w]", "_", request.node.nodeid)
     _browser_page.screenshot(
