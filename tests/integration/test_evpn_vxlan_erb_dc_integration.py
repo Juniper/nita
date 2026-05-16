@@ -53,6 +53,7 @@ def test_unauthenticated_request_rejected():
     assert resp.status_code in (401, 403)
 
 
+@pytest.mark.screenshot("/campustype/")
 @pytest.mark.integration
 def test_project_campus_type_visible_in_list(api_session, evpn_campus_type_id):
     """GET /api/v1/network-types/ must include the seeded evpn type."""
@@ -62,6 +63,7 @@ def test_project_campus_type_visible_in_list(api_session, evpn_campus_type_id):
     assert "evpn_vxlan_erb_dc_1.3" in names
 
 
+@pytest.mark.screenshot("/campustype/{evpn_campus_type_id}/")
 @pytest.mark.integration
 def test_project_campus_type_retrieve(api_session, evpn_campus_type_id):
     """GET /api/v1/network-types/{id}/ must return correct name/description."""
@@ -76,6 +78,7 @@ def test_project_campus_type_retrieve(api_session, evpn_campus_type_id):
     assert "resources" in data
 
 
+@pytest.mark.screenshot("/campustype/{evpn_campus_type_id}/")
 @pytest.mark.integration
 def test_project_actions_listed_for_campus_type(api_session, evpn_campus_type_id):
     """GET /api/v1/actions/?campus_type_id=... must return the four actions
@@ -95,6 +98,7 @@ def test_project_actions_listed_for_campus_type(api_session, evpn_campus_type_id
     assert "Test" in action_names
 
 
+@pytest.mark.screenshot("/campustype/{evpn_campus_type_id}/")
 @pytest.mark.integration
 def test_project_actions_reference_valid_categories(api_session, evpn_campus_type_id):
     """Every action for the evpn type must reference BUILD or TEST category."""
@@ -172,6 +176,7 @@ def test_network_create_with_dc2_hosts(api_session, evpn_campus_type_id):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.screenshot("/campusnetwork/{evpn_network}/")
 @pytest.mark.integration
 def test_host_file_stored_and_retrievable(api_session, evpn_network):
     """GET /api/v1/networks/{id}/ must return the host_file exactly as POSTed."""
@@ -184,6 +189,7 @@ def test_host_file_stored_and_retrievable(api_session, evpn_network):
     assert stored.strip() == original.strip()
 
 
+@pytest.mark.screenshot("/campusnetwork/{evpn_network}/")
 @pytest.mark.integration
 def test_host_file_contains_dc1_inventory_groups(api_session, evpn_network):
     """The host_file of a DC1 network must contain the expected Ansible
@@ -198,6 +204,7 @@ def test_host_file_contains_dc1_inventory_groups(api_session, evpn_network):
         assert group in host_file, f"Group '{group}' missing from host_file"
 
 
+@pytest.mark.screenshot("/campusnetwork/{evpn_network}/")
 @pytest.mark.integration
 def test_host_file_patch_with_dc2_hosts(api_session, evpn_network):
     """PATCH /api/v1/networks/{id}/ must accept a replacement host_file."""
@@ -234,6 +241,7 @@ def test_workbook_upload_dc1_xlsx_returns_200(api_session, evpn_network):
     assert body["status"] == "success"
 
 
+@pytest.mark.screenshot("/campus_network/{evpn_network_with_workbook}/configuration_view/")
 @pytest.mark.integration
 def test_workbook_upload_persists_base_sheet(api_session, evpn_network_with_workbook):
     """After upload, GET …/workbook/ must include a 'base' sheet."""
@@ -248,6 +256,7 @@ def test_workbook_upload_persists_base_sheet(api_session, evpn_network_with_work
     assert "base" in sheet_names
 
 
+@pytest.mark.screenshot("/campus_network/{evpn_network_with_workbook}/configuration_view/")
 @pytest.mark.integration
 def test_workbook_upload_persists_all_expected_sheets(
     api_session, evpn_network_with_workbook
@@ -312,6 +321,7 @@ def test_workbook_upload_idempotent(api_session, evpn_network):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.screenshot("/campus_network/{evpn_network_with_workbook}/configuration_view/")
 @pytest.mark.integration
 def test_workbook_download_returns_xlsx_attachment(
     api_session, evpn_network_with_workbook
@@ -331,6 +341,7 @@ def test_workbook_download_returns_xlsx_attachment(
     assert len(resp.content) > 0
 
 
+@pytest.mark.screenshot("/campus_network/{evpn_network_with_workbook}/configuration_view/")
 @pytest.mark.integration
 def test_workbook_download_content_is_valid_xlsx(
     api_session, evpn_network_with_workbook
@@ -366,6 +377,7 @@ def test_workbook_download_without_auth_rejected():
 
 
 # LIST
+@pytest.mark.screenshot("/campusnetwork/")
 @pytest.mark.integration
 def test_network_list_returns_paginated_envelope(api_session, evpn_network):
     """GET /api/v1/networks/ must return count + results."""
@@ -377,6 +389,7 @@ def test_network_list_returns_paginated_envelope(api_session, evpn_network):
     assert body["count"] >= 1
 
 
+@pytest.mark.screenshot("/campusnetwork/")
 @pytest.mark.integration
 def test_network_list_includes_created_network(api_session, evpn_network):
     """The newly created network must appear in the list."""
@@ -387,6 +400,7 @@ def test_network_list_includes_created_network(api_session, evpn_network):
 
 
 # RETRIEVE
+@pytest.mark.screenshot("/campusnetwork/{evpn_network}/")
 @pytest.mark.integration
 def test_network_retrieve_returns_campus_type_name(api_session, evpn_network):
     """GET /api/v1/networks/{id}/ must include campus_type_name."""
@@ -406,6 +420,7 @@ def test_network_retrieve_unknown_id_returns_404(api_session):
 
 
 # UPDATE (PUT)
+@pytest.mark.screenshot("/campusnetwork/{evpn_network}/")
 @pytest.mark.integration
 def test_network_full_update(api_session, evpn_network):
     """PUT /api/v1/networks/{id}/ must replace all supplied fields."""
@@ -428,6 +443,7 @@ def test_network_full_update(api_session, evpn_network):
 
 
 # PARTIAL UPDATE (PATCH)
+@pytest.mark.screenshot("/campusnetwork/{evpn_network}/")
 @pytest.mark.integration
 def test_network_partial_update_description(api_session, evpn_network):
     """PATCH must update only the description field."""
@@ -441,6 +457,7 @@ def test_network_partial_update_description(api_session, evpn_network):
     assert resp.json()["description"] == new_desc
 
 
+@pytest.mark.screenshot("/campusnetwork/{evpn_network}/")
 @pytest.mark.integration
 def test_network_partial_update_status(api_session, evpn_network):
     """PATCH must update only the status field."""
@@ -495,6 +512,7 @@ def test_network_delete_without_auth_rejected(evpn_network):
 
 
 # WORKBOOK RETRIEVE + SAVE + CLEAR
+@pytest.mark.screenshot("/campus_network/{evpn_network_with_workbook}/configuration_view/")
 @pytest.mark.integration
 def test_workbook_retrieve_after_upload(api_session, evpn_network_with_workbook):
     """GET …/workbook/ must return sheets with status=success after upload."""
@@ -509,6 +527,7 @@ def test_workbook_retrieve_after_upload(api_session, evpn_network_with_workbook)
     assert len(body["workbook"]) > 0
 
 
+@pytest.mark.screenshot("/campus_network/{evpn_network_with_workbook}/configuration_view/")
 @pytest.mark.integration
 def test_workbook_save_updates_data(api_session, evpn_network_with_workbook):
     """POST …/workbook/save/ must persist updated grid rows."""
@@ -565,6 +584,7 @@ def test_action_history_list_returns_paginated_envelope(api_session):
     assert "results" in body
 
 
+@pytest.mark.screenshot("/campus_network/{evpn_network}/action_history/")
 @pytest.mark.integration
 def test_action_history_filter_by_network(api_session, evpn_network):
     """GET /api/v1/action-history/?campus_network_id=... must return only

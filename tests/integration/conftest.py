@@ -184,3 +184,108 @@ def evpn_network_with_workbook(api_session: requests.Session, evpn_network: dict
         f"Workbook upload failed ({upload_resp.status_code}): {upload_resp.text}"
     )
     yield evpn_network
+
+
+# ---------------------------------------------------------------------------
+# GUI screenshot infrastructure
+# ---------------------------------------------------------------------------
+
+import re
+from pathlib import Path
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Store the per-phase outcome on the node so fixtures can read pass/fail."""
+    outcome = yield
+    rep = outcome.get_result()
+    setattr(item, f"rep_{rep.when}", rep)
+
+
+@pytest.fixture(scope="session")
+def screenshot_dir():
+    """Session-scoped directory that collects all GUI snapshots."""
+    d = Path("ci-screenshots")
+    d.mkdir(exist_ok=True)
+    return d
+
+
+@pytest.fixture(scope="session")
+def _browser_page():
+    """Session-scoped Playwright page authenticated via the admin login form.
+
+    Logs in once per test session using the live NITA superuser credentials.
+    Yields None if Playwright or Chromium is not available so all tests
+    continue without screenshots.
+    """
+    try:
+        from playwright.sync_api import sync_playwright  # noqa: PLC0415
+    except ImportError:
+        yield None
+        return
+
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            context = browser.new_context()
+            page = context.new_page()
+            logged_in = False
+            try:
+                page.goto(
+                    f"{BASE_URL}/admin/login/",
+                    wait_until="domcontentloaded",
+                    timeout=15_000,
+                )
+                page.fill("#id_username", NITA_USER)
+                page.fill("#id_password", NITA_PASS)
+                page.click("input[type=submit]")
+                page.wait_for_load_state("networkidle", timeout=10_000)
+                logged_in = True
+            except Exception:
+                pass
+            yield page if logged_in else None
+            context.close()
+            browser.close()
+    except Exception:
+        yield None
+
+
+@pytest.fixture(autouse=True)
+def _screenshot_on_pass(request, _browser_page, screenshot_dir):
+    """After each passing @pytest.mark.screenshot test, save a GUI snapshot."""
+    yield
+
+    if _browser_page is None:
+        return
+    marker = request.node.get_closest_marker("screenshot")
+    if marker is None:
+        return
+    rep = getattr(request.node, "rep_call", None)
+    if rep is None or not rep.passed:
+        return
+
+    url_template = marker.args[0]
+
+    def _resolve(m):
+        try:
+            val = request.getfixturevalue(m.group(1))
+            if isinstance(val, dict):
+                return str(val.get("id", val))
+            return str(getattr(val, "id", val))
+        except Exception:
+            return m.group(0)
+
+    url = re.sub(r"\{(\w+)\}", _resolve, url_template)
+
+    try:
+        _browser_page.goto(
+            BASE_URL + url, wait_until="domcontentloaded", timeout=10_000
+        )
+        _browser_page.wait_for_load_state("networkidle", timeout=5_000)
+    except Exception:
+        return
+
+    safe = re.sub(r"[^\w]", "_", request.node.nodeid)
+    _browser_page.screenshot(
+        path=str(screenshot_dir / f"{safe}.png"), full_page=True
+    )
