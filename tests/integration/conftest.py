@@ -214,9 +214,12 @@ def screenshot_dir():
 def _browser_page():
     """Session-scoped Playwright page pre-authenticated via a Django session cookie.
 
-    Uses requests to POST credentials to the admin login endpoint once, then
-    injects the resulting session cookie into the Playwright browser context.
-    Yields None if Playwright/Chromium is unavailable so all tests run unaffected.
+    Obtains a session cookie by POSTing to the admin login endpoint, using the
+    CSRF token extracted from the login-page HTML (reliable even when the
+    csrftoken cookie is absent or restricted by SameSite/Secure policy).
+    Injects the session cookie into the Playwright browser context.
+    Yields None if authentication fails or Playwright is unavailable so all
+    tests continue to run unaffected.
     """
     try:
         from playwright.sync_api import sync_playwright  # noqa: PLC0415
@@ -224,27 +227,30 @@ def _browser_page():
         yield None
         return
 
-    # Obtain a Django session cookie via the admin login endpoint.
-    # More reliable than Playwright form-fill: no networkidle race conditions,
-    # no CSS-selector dependency, no page-load timeouts.
+    # --- obtain a Django sessionid via the admin login form -----------------
     try:
         rs = requests.Session()
-        rs.get(f"{BASE_URL}/admin/login/", timeout=15)
-        csrf = rs.cookies.get("csrftoken", "")
+        login_url = f"{BASE_URL}/admin/login/"
+        resp = rs.get(login_url, timeout=15)
+        resp.raise_for_status()
+        # Extract CSRF token from the rendered HTML form (more reliable than
+        # reading it from the csrftoken cookie, which may be absent on the
+        # first request when certain SameSite/Secure settings are active).
+        m = re.search(r'name="csrfmiddlewaretoken"\s+value="([^"]+)"', resp.text)
+        csrf = m.group(1) if m else rs.cookies.get("csrftoken", "")
         rs.post(
-            f"{BASE_URL}/admin/login/",
+            login_url,
             data={
                 "username": NITA_USER,
                 "password": NITA_PASS,
                 "csrfmiddlewaretoken": csrf,
                 "next": "/admin/",
             },
-            headers={"Referer": f"{BASE_URL}/admin/login/"},
+            headers={"Referer": login_url},
             allow_redirects=True,
             timeout=15,
         )
         sessionid = rs.cookies.get("sessionid")
-        csrftoken = rs.cookies.get("csrftoken", "")
     except Exception:
         yield None
         return
@@ -253,14 +259,14 @@ def _browser_page():
         yield None
         return
 
+    # --- launch Playwright, inject session cookie, yield the page -----------
     try:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch()
             context = browser.new_context()
-            context.add_cookies([
-                {"name": "sessionid", "value": sessionid, "url": BASE_URL},
-                {"name": "csrftoken", "value": csrftoken, "url": BASE_URL},
-            ])
+            context.add_cookies(
+                [{"name": "sessionid", "value": sessionid, "url": BASE_URL}]
+            )
             page = context.new_page()
             yield page
             context.close()
