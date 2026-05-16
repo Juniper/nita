@@ -76,16 +76,10 @@ jobs:
       # Set CONTAINER_REGISTRY to the repo owner's GHCR namespace (lowercased).
       # On the upstream repo this resolves to ghcr.io/aburston; on any fork it
       # automatically resolves to ghcr.io/<fork-owner>. All images are public.
-      # A repository variable CONTAINER_REGISTRY overrides this (useful when CI
-      # runs in a different org but images live in ghcr.io/aburston).
       - name: Set container registry
         run: |
-          if [[ -n "${{ vars.CONTAINER_REGISTRY }}" ]]; then
-            echo "CONTAINER_REGISTRY=${{ vars.CONTAINER_REGISTRY }}" >> "$GITHUB_ENV"
-          else
-            echo "CONTAINER_REGISTRY=ghcr.io/$(echo '${{ github.repository_owner }}' \
-              | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
-          fi
+          echo "CONTAINER_REGISTRY=ghcr.io/$(echo '${{ github.repository_owner }}' \
+            | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
       # gettext-base  — provides envsubst (used by apply-k8s.sh)
       # openjdk-17-jdk — provides keytool (required by setup-configmaps.sh)
@@ -324,12 +318,11 @@ jobs:
         run: |
           kubectl port-forward svc/webapp 8000:8000 -n nita &
           echo "PF_PID=$!" >> "$GITHUB_ENV"
-          # GET /api/v1/auth/token/ returns 405 (Method Not Allowed) because it
-          # only accepts POST — any non-000 response means Django is fully up.
           for i in $(seq 1 30); do
             STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
-              http://localhost:8000/api/v1/auth/token/ 2>/dev/null || echo 000)
-            if [[ "$STATUS" == "401" || "$STATUS" == "403" || "$STATUS" == "405" ]]; then
+              -H "Authorization: Token invalid" \
+              http://localhost:8000/api/v1/networks/ 2>/dev/null || echo 000)
+            if [[ "$STATUS" == "401" || "$STATUS" == "403" ]]; then
               echo "Webapp API is up (HTTP $STATUS)"
               exit 0
             fi
