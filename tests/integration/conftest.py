@@ -212,11 +212,11 @@ def screenshot_dir():
 
 @pytest.fixture(scope="session")
 def _browser_page():
-    """Session-scoped Playwright page authenticated via the admin login form.
+    """Session-scoped Playwright page pre-authenticated via a Django session cookie.
 
-    Logs in once per test session using the live NITA superuser credentials.
-    Yields None if Playwright or Chromium is not available so all tests
-    continue without screenshots.
+    Uses requests to POST credentials to the admin login endpoint once, then
+    injects the resulting session cookie into the Playwright browser context.
+    Yields None if Playwright/Chromium is unavailable so all tests run unaffected.
     """
     try:
         from playwright.sync_api import sync_playwright  # noqa: PLC0415
@@ -224,26 +224,45 @@ def _browser_page():
         yield None
         return
 
+    # Obtain a Django session cookie via the admin login endpoint.
+    # More reliable than Playwright form-fill: no networkidle race conditions,
+    # no CSS-selector dependency, no page-load timeouts.
+    try:
+        rs = requests.Session()
+        rs.get(f"{BASE_URL}/admin/login/", timeout=15)
+        csrf = rs.cookies.get("csrftoken", "")
+        rs.post(
+            f"{BASE_URL}/admin/login/",
+            data={
+                "username": NITA_USER,
+                "password": NITA_PASS,
+                "csrfmiddlewaretoken": csrf,
+                "next": "/admin/",
+            },
+            headers={"Referer": f"{BASE_URL}/admin/login/"},
+            allow_redirects=True,
+            timeout=15,
+        )
+        sessionid = rs.cookies.get("sessionid")
+        csrftoken = rs.cookies.get("csrftoken", "")
+    except Exception:
+        yield None
+        return
+
+    if not sessionid:
+        yield None
+        return
+
     try:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch()
             context = browser.new_context()
+            context.add_cookies([
+                {"name": "sessionid", "value": sessionid, "url": BASE_URL},
+                {"name": "csrftoken", "value": csrftoken, "url": BASE_URL},
+            ])
             page = context.new_page()
-            logged_in = False
-            try:
-                page.goto(
-                    f"{BASE_URL}/admin/login/",
-                    wait_until="domcontentloaded",
-                    timeout=15_000,
-                )
-                page.fill("#id_username", NITA_USER)
-                page.fill("#id_password", NITA_PASS)
-                page.click("input[type=submit]")
-                page.wait_for_load_state("networkidle", timeout=10_000)
-                logged_in = True
-            except Exception:
-                pass
-            yield page if logged_in else None
+            yield page
             context.close()
             browser.close()
     except Exception:

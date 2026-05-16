@@ -111,6 +111,7 @@ def test_project_actions_reference_valid_categories(api_session, evpn_campus_typ
         assert action["action_category"]["category_name"] in ("BUILD", "TEST")
 
 
+@pytest.mark.screenshot("/campustype/")
 @pytest.mark.integration
 def test_action_categories_list(api_session):
     """GET /api/v1/action-categories/ must return BUILD and TEST entries."""
@@ -126,6 +127,7 @@ def test_action_categories_list(api_session):
 # ===========================================================================
 
 
+@pytest.mark.screenshot("/campusnetwork/")
 @pytest.mark.integration
 def test_network_create_returns_201(api_session, evpn_campus_type_id):
     """POST /api/v1/networks/ with valid dc1-hosts must return 201 and
@@ -151,6 +153,7 @@ def test_network_create_returns_201(api_session, evpn_campus_type_id):
     api_session.delete(f"{BASE_URL}/api/v1/networks/{network_id}/", timeout=30)
 
 
+@pytest.mark.screenshot("/campusnetwork/")
 @pytest.mark.integration
 def test_network_create_with_dc2_hosts(api_session, evpn_campus_type_id):
     """The same CampusType can back a second network using dc2-hosts."""
@@ -227,6 +230,7 @@ def test_host_file_patch_with_dc2_hosts(api_session, evpn_network):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.screenshot("/campus_network/{evpn_network}/configuration_view/")
 @pytest.mark.integration
 def test_workbook_upload_dc1_xlsx_returns_200(api_session, evpn_network):
     """POST …/workbook/upload/ with dc1_data.xlsx must succeed (HTTP 200)."""
@@ -286,6 +290,7 @@ def test_workbook_upload_without_file_returns_400(api_session, evpn_network):
     assert resp.status_code == 400
 
 
+@pytest.mark.screenshot("/campus_network/{evpn_network}/configuration_view/")
 @pytest.mark.integration
 def test_workbook_upload_idempotent(api_session, evpn_network):
     """Uploading the same workbook twice must not double the sheet count."""
