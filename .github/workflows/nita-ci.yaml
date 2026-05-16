@@ -101,7 +101,7 @@ jobs:
       # The config removes the control-plane taint (so pods can schedule on the
       # single node) and mounts the hostPath directories created above.
       - name: Create Kind cluster
-        uses: helm/kind-action@v1.10.0
+        uses: helm/kind-action@v1.14.0
         with:
           cluster_name: nita
           config: .github/kind-config.yaml
@@ -307,7 +307,7 @@ jobs:
       # ---------------------------------------------------------------------------
 
       - name: Set up Python for integration tests
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
 
