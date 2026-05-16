@@ -354,6 +354,13 @@ jobs:
       - name: Write screenshots to job summary
         if: always()
         run: |
+          DBG="$GITHUB_WORKSPACE/ci-screenshots/_login_debug.txt"
+          if [[ -f "$DBG" ]]; then
+            echo "## Browser login debug log" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat "$DBG" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
           if compgen -G "$GITHUB_WORKSPACE/ci-screenshots/*.png" > /dev/null 2>&1; then
             echo "## E2E GUI Snapshots" >> "$GITHUB_STEP_SUMMARY"
             for f in "$GITHUB_WORKSPACE/ci-screenshots/"*.png; do

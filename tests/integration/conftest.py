@@ -331,6 +331,14 @@ def _screenshot_on_pass(request, _browser_page, screenshot_dir):
         pass
 
     safe = re.sub(r"[^\w]", "_", request.node.nodeid)
-    _browser_page.screenshot(
-        path=str(screenshot_dir / f"{safe}.png"), full_page=True
-    )
+    dest = screenshot_dir / f"{safe}.png"
+    try:
+        _browser_page.screenshot(path=str(dest), full_page=True)
+        # Append a record to the debug log so we know which screenshots fired.
+        debug = screenshot_dir / "_login_debug.txt"
+        with debug.open("a") as fh:
+            fh.write(f"screenshot: {dest.name}\n")
+    except Exception as exc:
+        debug = screenshot_dir / "_login_debug.txt"
+        with debug.open("a") as fh:
+            fh.write(f"screenshot FAILED {dest.name}: {exc}\n")
