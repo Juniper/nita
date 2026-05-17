@@ -249,7 +249,9 @@ def _browser_page(screenshot_dir):
         m = re.search(r'name="csrfmiddlewaretoken"\s+value="([^"]+)"', resp.text)
         csrf = m.group(1) if m else rs.cookies.get("csrftoken", "")
         _log(f"csrf from html: {'yes len=' + str(len(csrf)) if m else 'no, from cookie len=' + str(len(csrf))}")
-        post_resp = rs.post(
+        _log(f"cookies before POST: { {c.name: c.value[:8] + '...' for c in rs.cookies} }")
+        # First pass without redirects to capture the raw login response code
+        post_resp_nr = rs.post(
             login_url,
             data={
                 "username": NITA_USER,
@@ -258,10 +260,14 @@ def _browser_page(screenshot_dir):
                 "next": "/admin/",
             },
             headers={"Referer": login_url},
-            allow_redirects=True,
+            allow_redirects=False,
             timeout=15,
         )
-        _log(f"POST status: {post_resp.status_code}  final_url: {post_resp.url}")
+        _log(f"POST (no-redir) status: {post_resp_nr.status_code}  location: {post_resp_nr.headers.get('Location', '-')}")
+        _log(f"POST response snippet: {post_resp_nr.text[:300]!r}")
+        # Follow redirects to reach the final page
+        post_resp = rs.get(post_resp_nr.headers["Location"], timeout=15) if post_resp_nr.status_code in (301, 302, 303, 307, 308) else post_resp_nr
+        _log(f"cookies after POST: { {c.name: c.value[:8] + '...' for c in rs.cookies} }")
         sessionid = rs.cookies.get("sessionid")
         _log(f"sessionid: {'obtained' if sessionid else 'None — login failed'}")
     except Exception as exc:
