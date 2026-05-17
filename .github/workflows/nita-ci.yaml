@@ -417,11 +417,14 @@ jobs:
           echo ""
           echo "=== ci-screenshots/ contents ==="
           ls -la "$GITHUB_WORKSPACE/ci-screenshots/" 2>/dev/null || echo "(directory not found)"
-          # Emit first 40 lines as a single annotation so it's readable via API
+          # Emit first 80 lines as a single annotation so it's readable via API
           if [[ -f "$DBG" ]]; then
-            DBG_CONTENT=$(head -40 "$DBG" | tr '\n' '|')
+            DBG_CONTENT=$(head -80 "$DBG" | tr '\n' '|')
             echo "::notice title=playwright-debug::${DBG_CONTENT}"
           fi
+          # Emit PNG count as annotation
+          PNG_COUNT=$(find "$GITHUB_WORKSPACE/ci-screenshots/" -name "*.png" 2>/dev/null | wc -l)
+          echo "::notice title=screenshot-count::PNG files in artifact: ${PNG_COUNT}"
 
       - name: Dump webapp logs on failure
         if: always()
