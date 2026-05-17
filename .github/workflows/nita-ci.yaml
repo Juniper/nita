@@ -265,19 +265,28 @@ jobs:
 
       - name: "Test: Jenkins ServiceAccount RBAC — list pods"
         run: |
-          kubectl auth can-i list pods \
-            --as=system:serviceaccount:nita:internal-jenknis-pod \
-            -n nita | grep -q "yes"
-          echo "PASS: internal-jenknis-pod can list pods"
+          for i in $(seq 1 6); do
+            RESULT=$(kubectl auth can-i list pods \
+              --as=system:serviceaccount:nita:internal-jenknis-pod \
+              -n nita 2>/dev/null || echo "no")
+            if [[ "$RESULT" == "yes" ]]; then
+              echo "PASS: internal-jenknis-pod can list pods"
+              break
+            fi
+            echo "  attempt $i: got '$RESULT', retrying in 10s..."
+            sleep 10
+          done
+          [[ "$RESULT" == "yes" ]] || { echo "FAIL: RBAC not ready after 60s"; exit 1; }
 
       - name: "Test: Jenkins ServiceAccount RBAC — create/delete pods"
         run: |
-          kubectl auth can-i create pods \
-            --as=system:serviceaccount:nita:internal-jenknis-pod \
-            -n nita | grep -q "yes"
-          kubectl auth can-i delete pods \
-            --as=system:serviceaccount:nita:internal-jenknis-pod \
-            -n nita | grep -q "yes"
+          for verb in create delete; do
+            RESULT=$(kubectl auth can-i $verb pods \
+              --as=system:serviceaccount:nita:internal-jenknis-pod \
+              -n nita 2>/dev/null || echo "no")
+            [[ "$RESULT" == "yes" ]] \
+              || { echo "FAIL: internal-jenknis-pod cannot $verb pods"; exit 1; }
+          done
           echo "PASS: internal-jenknis-pod can create and delete pods"
 
       # ---------------------------------------------------------------------------
