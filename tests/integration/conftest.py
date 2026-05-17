@@ -234,13 +234,18 @@ def _browser_page(screenshot_dir):
 
     try:
         import playwright as _pw_mod  # noqa: PLC0415
-        _log(f"playwright package version: {_pw_mod.__version__}")
         from playwright.sync_api import sync_playwright  # noqa: PLC0415
     except ImportError as ie:
         _log(f"playwright: ImportError — {ie}")
         _log(traceback.format_exc())
         yield None
         return
+    try:
+        import importlib.metadata as _imeta  # noqa: PLC0415
+        _ver = _imeta.version("playwright")
+    except Exception:
+        _ver = getattr(_pw_mod, "__version__", "unknown")
+    _log(f"playwright package version: {_ver}")
 
     # Log where playwright expects browser executables to live
     try:
