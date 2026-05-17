@@ -401,6 +401,11 @@ jobs:
           echo ""
           echo "=== ci-screenshots/ contents ==="
           ls -la "$GITHUB_WORKSPACE/ci-screenshots/" 2>/dev/null || echo "(directory not found)"
+          # Emit first 40 lines as a single annotation so it's readable via API
+          if [[ -f "$DBG" ]]; then
+            DBG_CONTENT=$(head -40 "$DBG" | tr '\n' '|')
+            echo "::notice title=playwright-debug::${DBG_CONTENT}"
+          fi
 
       - name: Dump webapp logs on failure
         if: always()
