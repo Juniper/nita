@@ -341,7 +341,15 @@ jobs:
           NITA_BASE_URL: http://localhost:8000
           NITA_USER: vagrant
           NITA_PASS: vagrant123
-        run: pytest -c pytest-integration.ini --tb=short -v --junitxml=test-results.xml 2>&1 | tee pytest-output.txt; exit ${PIPESTATUS[0]}
+        run: |
+          set -o pipefail
+          pytest -c pytest-integration.ini --tb=long -v --junitxml=test-results.xml 2>&1 | tee pytest-output.txt
+          PYTEST_EXIT=$?
+          echo '## Pytest Results' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -200 pytest-output.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit $PYTEST_EXIT
 
       - name: Upload test results
         if: always()
