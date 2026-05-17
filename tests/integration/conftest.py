@@ -291,6 +291,14 @@ def _browser_page(screenshot_dir):
         yield None
 
 
+def _dbg_log(screenshot_dir, *lines):
+    """Append lines to the shared login/screenshot debug log."""
+    debug = screenshot_dir / "_login_debug.txt"
+    with debug.open("a") as fh:
+        for line in lines:
+            fh.write(line + "\n")
+
+
 @pytest.fixture(autouse=True)
 def _screenshot_on_pass(request, _browser_page, screenshot_dir):
     """After each passing @pytest.mark.screenshot test, save a GUI snapshot."""
@@ -302,7 +310,11 @@ def _screenshot_on_pass(request, _browser_page, screenshot_dir):
     if marker is None:
         return
     rep = getattr(request.node, "rep_call", None)
-    if rep is None or not rep.passed:
+    if rep is None:
+        _dbg_log(screenshot_dir, f"skip {request.node.nodeid}: rep_call is None")
+        return
+    if not rep.passed:
+        _dbg_log(screenshot_dir, f"skip {request.node.nodeid}: rep_call.passed=False ({rep.outcome})")
         return
 
     url_template = marker.args[0]
@@ -317,12 +329,13 @@ def _screenshot_on_pass(request, _browser_page, screenshot_dir):
             return m.group(0)
 
     url = re.sub(r"\{(\w+)\}", _resolve, url_template)
+    full_url = BASE_URL + url
+    _dbg_log(screenshot_dir, f"goto {request.node.nodeid}: {full_url}")
 
     try:
-        _browser_page.goto(
-            BASE_URL + url, wait_until="domcontentloaded", timeout=10_000
-        )
-    except Exception:
+        _browser_page.goto(full_url, wait_until="domcontentloaded", timeout=10_000)
+    except Exception as exc:
+        _dbg_log(screenshot_dir, f"goto FAILED: {exc}")
         return
     # Give the page a moment to settle; a networkidle timeout is not fatal.
     try:
@@ -334,11 +347,6 @@ def _screenshot_on_pass(request, _browser_page, screenshot_dir):
     dest = screenshot_dir / f"{safe}.png"
     try:
         _browser_page.screenshot(path=str(dest), full_page=True)
-        # Append a record to the debug log so we know which screenshots fired.
-        debug = screenshot_dir / "_login_debug.txt"
-        with debug.open("a") as fh:
-            fh.write(f"screenshot: {dest.name}\n")
+        _dbg_log(screenshot_dir, f"screenshot OK: {dest.name}")
     except Exception as exc:
-        debug = screenshot_dir / "_login_debug.txt"
-        with debug.open("a") as fh:
-            fh.write(f"screenshot FAILED {dest.name}: {exc}\n")
+        _dbg_log(screenshot_dir, f"screenshot FAILED {dest.name}: {exc}")
