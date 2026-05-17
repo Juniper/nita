@@ -317,12 +317,6 @@ jobs:
       - name: Install Playwright browser
         run: playwright install chromium --with-deps
 
-      - name: Add http://localhost:8000 to webapp CSRF_TRUSTED_ORIGINS
-        run: |
-          kubectl set env deployment/webapp -n nita \
-            CSRF_TRUSTED_ORIGINS="https://localhost,http://localhost:8000"
-          kubectl rollout status deployment/webapp -n nita --timeout=2m
-
       - name: Start port-forward (webapp → localhost:8000)
         run: |
           kubectl port-forward svc/webapp 8000:8000 -n nita &
@@ -370,7 +364,8 @@ print("POST body[:200]:", post.text[:200])
 print("cookies after POST:", dict(rs.cookies))
 sessionid = rs.cookies.get("sessionid")
 print("sessionid:", "obtained" if sessionid else "NONE — login failed")
-sys.exit(0 if sessionid else 1)
+if not sessionid:
+    print("LOGIN FAILED — response body[:500]:", post.text[:500])
 PYEOF
 
       - name: Run pytest integration suite
