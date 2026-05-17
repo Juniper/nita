@@ -65,10 +65,11 @@ _DEFAULT_TIMEOUT = 15_000  # ms
 @pytest.fixture(scope="session")
 def _pw_browser():
     """Start Playwright and launch a headless Chromium browser for the session."""
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(args=_LAUNCH_ARGS)
-        yield browser
-        browser.close()
+    pw = sync_playwright().start()
+    browser = pw.chromium.launch(args=_LAUNCH_ARGS)
+    yield browser
+    browser.close()
+    pw.stop()
 
 
 @pytest.fixture(scope="session")
@@ -84,8 +85,10 @@ def pw_context(_pw_browser):
         page.goto(f"{_LOGIN_URL}?next=/", wait_until="domcontentloaded", timeout=_DEFAULT_TIMEOUT)
         page.fill("#id_username", NITA_USER)
         page.fill("#id_password", NITA_PASS)
-        page.click("input[type=submit]")
-        page.wait_for_load_state("networkidle", timeout=_DEFAULT_TIMEOUT)
+        # Use expect_navigation so we wait for the redirect after submit, not
+        # for networkidle (the index page has ongoing AJAX tree calls).
+        with page.expect_navigation(timeout=_DEFAULT_TIMEOUT):
+            page.click("input[type=submit]")
         assert "/admin/login/" not in page.url, (
             f"Login failed — still on login page.  URL: {page.url}"
         )
@@ -108,13 +111,16 @@ def gui_page(pw_context: BrowserContext) -> Page:
 # ---------------------------------------------------------------------------
 
 
+_NETWORKIDLE_TIMEOUT = 8_000  # ms — best-effort; the page may have ongoing XHR
+
+
 def _goto(page: Page, path: str, *, timeout: int = _DEFAULT_TIMEOUT) -> None:
-    """Navigate to an absolute path, wait for networkidle."""
+    """Navigate to an absolute path, wait for DOMContentLoaded then best-effort networkidle."""
     page.goto(f"{BASE_URL}{path}", wait_until="domcontentloaded", timeout=timeout)
     try:
-        page.wait_for_load_state("networkidle", timeout=5_000)
+        page.wait_for_load_state("networkidle", timeout=_NETWORKIDLE_TIMEOUT)
     except Exception:
-        pass  # networkidle is best-effort; the page may still have XHR polling
+        pass  # networkidle is best-effort; some pages have ongoing XHR polling
 
 
 # ===========================================================================
@@ -366,12 +372,16 @@ def test_configuration_page_shows_no_data_before_upload(
     """Before any upload the configuration page must report no data found."""
     _goto(gui_page, f"/campus_network/{evpn_network['id']}/configuration_view/")
     # The AJAX GET to /upload_file/ fills #grid; on empty DB it inserts the
-    # "No configuration data found" message.  Wait for the loader to clear.
+    # "No configuration data found" message.  Wait for the loader to disappear.
     gui_page.wait_for_selector("#import-config-data", timeout=_DEFAULT_TIMEOUT)
-    gui_page.wait_for_function(
-        "document.getElementById('loading_overlay').style.display === 'none'",
-        timeout=10_000,
-    )
+    # Wait for the loading overlay to hide (inserted by page JS after AJAX completes)
+    try:
+        gui_page.wait_for_selector(
+            "#loading_overlay[style*='display: none'], #loading_overlay:not([style])",
+            timeout=10_000,
+        )
+    except Exception:
+        pass  # overlay state might not be set via inline style on all paths
     content = gui_page.content()
     # Either explicit message or an empty grid is acceptable
     assert (
@@ -389,7 +399,7 @@ def test_workbook_upload_success_modal_appears(gui_page: Page, evpn_network: dic
 
     # 1. Open the upload modal
     gui_page.click("#import-config-data")
-    gui_page.wait_for_selector("#upload-modal.in, #upload-modal[style*='display: block']", timeout=5_000)
+    gui_page.locator("#upload-modal").wait_for(state="visible", timeout=5_000)
 
     # 2. Attach the file to the hidden file input
     gui_page.set_input_files("#file_upload", str(xlsx_path))
@@ -398,10 +408,7 @@ def test_workbook_upload_success_modal_appears(gui_page: Page, evpn_network: dic
     gui_page.click("#import")
 
     # 4. Wait for the success confirmation modal
-    gui_page.wait_for_selector(
-        "#upload-status-modal.in, #upload-status-modal[style*='display: block']",
-        timeout=30_000,
-    )
+    gui_page.locator("#upload-status-modal").wait_for(state="visible", timeout=30_000)
     content = gui_page.content()
     assert "imported successfully" in content, (
         "Workbook upload success message not found"
@@ -416,23 +423,23 @@ def test_workbook_upload_populates_grid(gui_page: Page, evpn_network: dict):
     gui_page.wait_for_selector("#import-config-data", timeout=_DEFAULT_TIMEOUT)
 
     gui_page.click("#import-config-data")
-    gui_page.wait_for_selector("#upload-modal.in, #upload-modal[style*='display: block']", timeout=5_000)
+    gui_page.locator("#upload-modal").wait_for(state="visible", timeout=5_000)
     gui_page.set_input_files("#file_upload", str(xlsx_path))
     gui_page.click("#import")
 
     # Wait for the success modal, then dismiss it
-    gui_page.wait_for_selector(
-        "#upload-status-modal.in, #upload-status-modal[style*='display: block']",
-        timeout=30_000,
-    )
+    gui_page.locator("#upload-status-modal").wait_for(state="visible", timeout=30_000)
     # Close the success modal by clicking OK
     gui_page.locator("#upload-status-modal button[data-dismiss='modal']").first.click()
+    gui_page.locator("#upload-status-modal").wait_for(state="hidden", timeout=5_000)
 
     # After dismissal, the grid should be populated (loader gone + grid has rows)
-    gui_page.wait_for_function(
-        "document.getElementById('loading_overlay').style.display === 'none'",
-        timeout=10_000,
-    )
+    try:
+        gui_page.wait_for_selector(
+            "#loading_overlay[style*='display: none']", timeout=10_000
+        )
+    except Exception:
+        pass
     # The grid must contain at least one tab (sheet) — tabs are rendered in #tabs-list
     gui_page.wait_for_selector("#tabs-list li, #grid .slick-row", timeout=10_000)
 
@@ -449,12 +456,12 @@ def test_workbook_upload_without_file_shows_error(gui_page: Page, evpn_network: 
     gui_page.wait_for_selector("#import-config-data", timeout=_DEFAULT_TIMEOUT)
 
     gui_page.click("#import-config-data")
-    gui_page.wait_for_selector("#upload-modal.in, #upload-modal[style*='display: block']", timeout=5_000)
+    gui_page.locator("#upload-modal").wait_for(state="visible", timeout=5_000)
     # Submit without choosing a file
     gui_page.click("#import")
 
     # The JS shows #upload-status with the "Please Select a valid xlsx/xls file" alert
-    gui_page.wait_for_selector("#upload-status[style*='block'], #upload-status.show", timeout=5_000)
+    gui_page.locator("#upload-status").wait_for(state="visible", timeout=5_000)
     content = gui_page.content()
     assert "valid" in content.lower() or "select" in content.lower(), (
         "Expected a file-validation error message"
@@ -521,27 +528,27 @@ def test_workbook_clear_removes_data(
 
     # 1. Click the 'Delete' button to open the clear-confirmation modal
     gui_page.click("#delete-config-data")
-    gui_page.wait_for_selector(
-        "#delete-config-modal.in, #delete-config-modal[style*='display: block']",
-        timeout=5_000,
-    )
+    gui_page.locator("#delete-config-modal").wait_for(state="visible", timeout=5_000)
 
     # 2. Confirm the deletion
     gui_page.click("#delete-config-data-confirm")
+    gui_page.locator("#delete-config-modal").wait_for(state="hidden", timeout=5_000)
 
-    # 3. Wait for the loading overlay to clear
-    gui_page.wait_for_function(
-        "document.getElementById('loading_overlay').style.display === 'none'",
-        timeout=10_000,
-    )
+    # 3. Brief pause for the AJAX delete to complete
+    try:
+        gui_page.wait_for_load_state("networkidle", timeout=5_000)
+    except Exception:
+        pass
 
     # 4. Reload the page to verify the data has gone
     _goto(gui_page, f"/campus_network/{nid}/configuration_view/")
     gui_page.wait_for_selector("#import-config-data", timeout=_DEFAULT_TIMEOUT)
-    gui_page.wait_for_function(
-        "document.getElementById('loading_overlay').style.display === 'none'",
-        timeout=10_000,
-    )
+    try:
+        gui_page.wait_for_selector(
+            "#loading_overlay[style*='display: none']", timeout=10_000
+        )
+    except Exception:
+        pass
     content = gui_page.content()
     assert "No configuration data found" in content, (
         "Grid still shows data after clearing — expected 'No configuration data found'"
@@ -626,10 +633,8 @@ def test_network_delete_via_gui(
         gui_page.click("#del_network-btn")
 
         # The delete button triggers the delete modal
-        gui_page.wait_for_selector(
-            "#delete-campus-network-modal.in, "
-            "#delete-campus-network-modal[style*='display: block']",
-            timeout=5_000,
+        gui_page.locator("#delete-campus-network-modal").wait_for(
+            state="visible", timeout=5_000
         )
         gui_page.click("#campus-network-delete")
 
