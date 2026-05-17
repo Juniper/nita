@@ -317,6 +317,12 @@ jobs:
       - name: Install Playwright browser
         run: playwright install chromium --with-deps
 
+      - name: Add http://localhost:8000 to webapp CSRF_TRUSTED_ORIGINS
+        run: |
+          kubectl set env deployment/webapp -n nita \
+            CSRF_TRUSTED_ORIGINS="https://localhost,http://localhost:8000"
+          kubectl rollout status deployment/webapp -n nita --timeout=2m
+
       - name: Start port-forward (webapp → localhost:8000)
         run: |
           kubectl port-forward svc/webapp 8000:8000 -n nita &
@@ -334,6 +340,38 @@ jobs:
           done
           echo "ERROR: webapp API did not respond within 2.5 minutes"
           exit 1
+
+      - name: Probe webapp admin login (diagnostic)
+        run: |
+          python3 - <<'PYEOF'
+import re, requests, sys
+
+BASE = "http://localhost:8000"
+login_url = BASE + "/admin/login/"
+
+rs = requests.Session()
+print("GET", login_url)
+resp = rs.get(login_url, timeout=15)
+print("GET status:", resp.status_code)
+print("GET cookies:", dict(rs.cookies))
+
+m = re.search(r'name="csrfmiddlewaretoken"\s+value="([^"]+)"', resp.text)
+csrf = m.group(1) if m else rs.cookies.get("csrftoken", "")
+print("csrf from html:", bool(m), "len:", len(csrf))
+
+post = rs.post(login_url,
+    data={"username": "vagrant", "password": "vagrant123",
+          "csrfmiddlewaretoken": csrf, "next": "/admin/"},
+    headers={"Referer": login_url},
+    allow_redirects=False, timeout=15)
+print("POST status (no-redir):", post.status_code,
+      "Location:", post.headers.get("Location", "-"))
+print("POST body[:200]:", post.text[:200])
+print("cookies after POST:", dict(rs.cookies))
+sessionid = rs.cookies.get("sessionid")
+print("sessionid:", "obtained" if sessionid else "NONE — login failed")
+sys.exit(0 if sessionid else 1)
+PYEOF
 
       - name: Run pytest integration suite
         id: pytest
