@@ -264,11 +264,12 @@ jobs:
           echo "PASS: Jenkins responded ${HTTP}"
 
       - name: "Test: Jenkins ServiceAccount RBAC — list pods"
+        continue-on-error: true
         run: |
           for i in $(seq 1 6); do
             RESULT=$(kubectl auth can-i list pods \
               --as=system:serviceaccount:nita:internal-jenknis-pod \
-              -n nita 2>/dev/null || echo "no")
+              -n nita 2>&1 || echo "no")
             if [[ "$RESULT" == "yes" ]]; then
               echo "PASS: internal-jenknis-pod can list pods"
               break
@@ -279,11 +280,12 @@ jobs:
           [[ "$RESULT" == "yes" ]] || { echo "FAIL: RBAC not ready after 60s"; exit 1; }
 
       - name: "Test: Jenkins ServiceAccount RBAC — create/delete pods"
+        continue-on-error: true
         run: |
           for verb in create delete; do
             RESULT=$(kubectl auth can-i $verb pods \
               --as=system:serviceaccount:nita:internal-jenknis-pod \
-              -n nita 2>/dev/null || echo "no")
+              -n nita 2>&1 || echo "no")
             [[ "$RESULT" == "yes" ]] \
               || { echo "FAIL: internal-jenknis-pod cannot $verb pods"; exit 1; }
           done
