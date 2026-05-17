@@ -369,6 +369,17 @@ jobs:
             done
           fi
 
+      - name: Dump browser debug log to stdout
+        if: always()
+        run: |
+          DBG="$GITHUB_WORKSPACE/ci-screenshots/_login_debug.txt"
+          echo "=== ci-screenshots/_login_debug.txt ==="
+          cat "$DBG" 2>/dev/null || echo "(file not found — pytest did not create ci-screenshots/)"
+          echo "=== end of debug log ==="
+          echo ""
+          echo "=== ci-screenshots/ contents ==="
+          ls -la "$GITHUB_WORKSPACE/ci-screenshots/" 2>/dev/null || echo "(directory not found)"
+
       - name: Dump webapp logs on failure
         if: failure() && steps.pytest.outcome == 'failure'
         run: |

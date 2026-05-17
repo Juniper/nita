@@ -20,6 +20,7 @@ variables:
 
 import os
 import pathlib
+import traceback
 import uuid
 
 import pytest
@@ -232,11 +233,28 @@ def _browser_page(screenshot_dir):
                 fh.write(line + "\n")
 
     try:
+        import playwright as _pw_mod  # noqa: PLC0415
+        _log(f"playwright package version: {_pw_mod.__version__}")
         from playwright.sync_api import sync_playwright  # noqa: PLC0415
-    except ImportError:
-        _log("playwright: ImportError — not installed")
+    except ImportError as ie:
+        _log(f"playwright: ImportError — {ie}")
+        _log(traceback.format_exc())
         yield None
         return
+
+    # Log where playwright expects browser executables to live
+    try:
+        import playwright._impl._driver as _drv  # noqa: PLC0415
+        _log(f"playwright driver path: {_drv.compute_driver_executable()}")
+    except Exception as _pe:
+        _log(f"playwright driver path lookup failed: {_pe}")
+    try:
+        import glob as _glob  # noqa: PLC0415
+        _bpath = os.path.expanduser("~/.cache/ms-playwright")
+        _exes = _glob.glob(f"{_bpath}/chromium*/chrome-linux/chrome")
+        _log(f"chromium binaries found: {_exes if _exes else 'NONE in ' + _bpath}")
+    except Exception as _pe:
+        _log(f"chromium path check failed: {_pe}")
 
     # --- obtain a Django sessionid via the admin login form -----------------
     try:
@@ -280,8 +298,10 @@ def _browser_page(screenshot_dir):
     # --- launch Playwright, inject session cookie, yield the page -----------
     try:
         with sync_playwright() as playwright:
-            _log("playwright: launching chromium")
-            browser = playwright.chromium.launch(args=["--no-sandbox"])
+            _log("playwright: entered sync_playwright context")
+            browser = playwright.chromium.launch(
+                args=["--no-sandbox", "--disable-dev-shm-usage"]
+            )
             _log("playwright: chromium launched, creating context")
             context = browser.new_context()
             context.add_cookies(
@@ -294,6 +314,10 @@ def _browser_page(screenshot_dir):
             browser.close()
     except Exception as exc:
         _log(f"playwright exception ({type(exc).__name__}): {exc!r}")
+        _log("--- traceback ---")
+        for tb_line in traceback.format_exc().splitlines():
+            _log(tb_line)
+        _log("--- end traceback ---")
         yield None
 
 
