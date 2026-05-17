@@ -31,8 +31,6 @@ spec:
           env:
             - name: DJANGO_LOG_LEVEL
               value: DEBUG
-            - name: CSRF_TRUSTED_ORIGINS
-              value: "https://localhost,http://localhost:8000"
           image: ${CONTAINER_REGISTRY}/nita-webapp:latest
           name: webapp
           readinessProbe:

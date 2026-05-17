@@ -264,31 +264,20 @@ jobs:
           echo "PASS: Jenkins responded ${HTTP}"
 
       - name: "Test: Jenkins ServiceAccount RBAC — list pods"
-        continue-on-error: true
         run: |
-          for i in $(seq 1 6); do
-            RESULT=$(kubectl auth can-i list pods \
-              --as=system:serviceaccount:nita:internal-jenknis-pod \
-              -n nita 2>&1 || echo "no")
-            if [[ "$RESULT" == "yes" ]]; then
-              echo "PASS: internal-jenknis-pod can list pods"
-              break
-            fi
-            echo "  attempt $i: got '$RESULT', retrying in 10s..."
-            sleep 10
-          done
-          [[ "$RESULT" == "yes" ]] || { echo "FAIL: RBAC not ready after 60s"; exit 1; }
+          kubectl auth can-i list pods \
+            --as=system:serviceaccount:nita:internal-jenknis-pod \
+            -n nita | grep -q "yes"
+          echo "PASS: internal-jenknis-pod can list pods"
 
       - name: "Test: Jenkins ServiceAccount RBAC — create/delete pods"
-        continue-on-error: true
         run: |
-          for verb in create delete; do
-            RESULT=$(kubectl auth can-i $verb pods \
-              --as=system:serviceaccount:nita:internal-jenknis-pod \
-              -n nita 2>&1 || echo "no")
-            [[ "$RESULT" == "yes" ]] \
-              || { echo "FAIL: internal-jenknis-pod cannot $verb pods"; exit 1; }
-          done
+          kubectl auth can-i create pods \
+            --as=system:serviceaccount:nita:internal-jenknis-pod \
+            -n nita | grep -q "yes"
+          kubectl auth can-i delete pods \
+            --as=system:serviceaccount:nita:internal-jenknis-pod \
+            -n nita | grep -q "yes"
           echo "PASS: internal-jenknis-pod can create and delete pods"
 
       # ---------------------------------------------------------------------------
@@ -325,9 +314,6 @@ jobs:
       - name: Install integration-test dependencies
         run: pip install -r requirements-integration-test.txt
 
-      - name: Install Playwright browser
-        run: playwright install chromium --with-deps
-
       - name: Start port-forward (webapp → localhost:8000)
         run: |
           kubectl port-forward svc/webapp 8000:8000 -n nita &
@@ -346,22 +332,6 @@ jobs:
           echo "ERROR: webapp API did not respond within 2.5 minutes"
           exit 1
 
-      - name: Pre-create Django session for Playwright
-        run: |
-          # Create a pre-authenticated Django session directly in the DB via
-          # kubectl exec, bypassing the /admin/login/ endpoint (which can 500).
-          PY="from django.contrib.auth.models import User; from django.contrib.sessions.backends.db import SessionStore; u = User.objects.get(username='vagrant'); s = SessionStore(); s['_auth_user_id'] = str(u.pk); s['_auth_user_backend'] = 'django.contrib.auth.backends.ModelBackend'; s['_auth_user_hash'] = u.get_session_auth_hash(); s.create(); print(s.session_key)"
-          SESSION_KEY=$(kubectl exec -n nita deployment/webapp -- \
-            python build-and-test-webapp/nita-webapp/ngcn_workbench/manage.py \
-            shell -c "${PY}" 2>/dev/null | tr -d '\r\n ')
-          if [[ "${SESSION_KEY}" =~ ^[a-z0-9]{32}$ ]]; then
-            echo "NITA_SESSION_KEY=${SESSION_KEY}" >> "$GITHUB_ENV"
-            echo "Created Django session: ${SESSION_KEY:0:10}..."
-          else
-            echo "WARNING: Could not create Django session (got: '${SESSION_KEY}')"
-            echo "Playwright screenshots will fall back to admin login"
-          fi
-
       - name: Run pytest integration suite
         id: pytest
         env:
@@ -370,69 +340,13 @@ jobs:
           NITA_PASS: vagrant123
         run: pytest -c pytest-integration.ini --tb=short -v
 
-      - name: Capture webapp and jenkins logs into artifact
-        if: always()
-        run: |
-          mkdir -p ci-screenshots
-          echo "=== webapp pod logs ==="
-          kubectl logs -n nita -l io.kompose.service=webapp --tail=500 \
-            2>/dev/null > ci-screenshots/webapp.log || true
-          echo "=== jenkins pod logs ==="
-          kubectl logs -n nita -l io.kompose.service=jenkins --tail=200 \
-            2>/dev/null > ci-screenshots/jenkins.log || true
-
-      - name: Upload GUI screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-gui-screenshots
-          path: ci-screenshots/
-          if-no-files-found: ignore
-
-      - name: Write screenshots to job summary
-        if: always()
-        run: |
-          DBG="$GITHUB_WORKSPACE/ci-screenshots/_login_debug.txt"
-          if [[ -f "$DBG" ]]; then
-            echo "## Browser login debug log" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            cat "$DBG" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if compgen -G "$GITHUB_WORKSPACE/ci-screenshots/*.png" > /dev/null 2>&1; then
-            echo "## E2E GUI Snapshots" >> "$GITHUB_STEP_SUMMARY"
-            for f in "$GITHUB_WORKSPACE/ci-screenshots/"*.png; do
-              name=$(basename "$f" .png | sed 's/_/ /g')
-              echo "### ${name}" >> "$GITHUB_STEP_SUMMARY"
-            done
-          fi
-
-      - name: Dump browser debug log to stdout
-        if: always()
-        run: |
-          DBG="$GITHUB_WORKSPACE/ci-screenshots/_login_debug.txt"
-          echo "=== ci-screenshots/_login_debug.txt ==="
-          cat "$DBG" 2>/dev/null || echo "(file not found — pytest did not create ci-screenshots/)"
-          echo "=== end of debug log ==="
-          echo ""
-          echo "=== ci-screenshots/ contents ==="
-          ls -la "$GITHUB_WORKSPACE/ci-screenshots/" 2>/dev/null || echo "(directory not found)"
-          # Emit first 80 lines as a single annotation so it's readable via API
-          if [[ -f "$DBG" ]]; then
-            DBG_CONTENT=$(head -80 "$DBG" | tr '\n' '|')
-            echo "::notice title=playwright-debug::${DBG_CONTENT}"
-          fi
-          # Emit PNG count as annotation
-          PNG_COUNT=$(find "$GITHUB_WORKSPACE/ci-screenshots/" -name "*.png" 2>/dev/null | wc -l)
-          echo "::notice title=screenshot-count::PNG files in artifact: ${PNG_COUNT}"
-
       - name: Dump webapp logs on failure
-        if: always()
+        if: failure() && steps.pytest.outcome == 'failure'
         run: |
-          echo "=== webapp pod logs (tail 200) ==="
-          kubectl logs -n nita -l io.kompose.service=webapp --tail=200 2>/dev/null || true
-          echo "=== jenkins pod logs (tail 50) ==="
-          kubectl logs -n nita -l io.kompose.service=jenkins --tail=50 2>/dev/null || true
+          echo "=== webapp pod logs (all) ==="
+          kubectl logs -n nita -l io.kompose.service=webapp --tail=500 2>/dev/null || true
+          echo "=== jenkins pod logs (last 100 lines) ==="
+          kubectl logs -n nita -l io.kompose.service=jenkins --tail=100 2>/dev/null || true
 
       - name: Stop port-forward
         if: always()
