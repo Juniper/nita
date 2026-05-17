@@ -346,6 +346,22 @@ jobs:
           echo "ERROR: webapp API did not respond within 2.5 minutes"
           exit 1
 
+      - name: Pre-create Django session for Playwright
+        run: |
+          # Create a pre-authenticated Django session directly in the DB via
+          # kubectl exec, bypassing the /admin/login/ endpoint (which can 500).
+          PY="from django.contrib.auth.models import User; from django.contrib.sessions.backends.db import SessionStore; u = User.objects.get(username='vagrant'); s = SessionStore(); s['_auth_user_id'] = str(u.pk); s['_auth_user_backend'] = 'django.contrib.auth.backends.ModelBackend'; s['_auth_user_hash'] = u.get_session_auth_hash(); s.create(); print(s.session_key)"
+          SESSION_KEY=$(kubectl exec -n nita deployment/webapp -- \
+            python build-and-test-webapp/nita-webapp/ngcn_workbench/manage.py \
+            shell -c "${PY}" 2>/dev/null | tr -d '\r\n ')
+          if [[ "${SESSION_KEY}" =~ ^[a-z0-9]{32}$ ]]; then
+            echo "NITA_SESSION_KEY=${SESSION_KEY}" >> "$GITHUB_ENV"
+            echo "Created Django session: ${SESSION_KEY:0:10}..."
+          else
+            echo "WARNING: Could not create Django session (got: '${SESSION_KEY}')"
+            echo "Playwright screenshots will fall back to admin login"
+          fi
+
       - name: Run pytest integration suite
         id: pytest
         env:

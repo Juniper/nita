@@ -256,45 +256,55 @@ def _browser_page(screenshot_dir):
     try:
         import glob as _glob  # noqa: PLC0415
         _bpath = os.path.expanduser("~/.cache/ms-playwright")
-        _exes = _glob.glob(f"{_bpath}/chromium*/chrome-linux/chrome")
-        _log(f"chromium binaries found: {_exes if _exes else 'NONE in ' + _bpath}")
+        _all = _glob.glob(f"{_bpath}/**/*", recursive=True)
+        _chrom = [p for p in _all if "chrom" in p.lower() and os.path.isfile(p)]
+        _log(f"chromium executables under {_bpath}: {_chrom if _chrom else 'NONE'}")
     except Exception as _pe:
         _log(f"chromium path check failed: {_pe}")
 
-    # --- obtain a Django sessionid via the admin login form -----------------
-    try:
-        rs = requests.Session()
-        login_url = f"{BASE_URL}/admin/login/"
-        _log(f"GET {login_url}")
-        resp = rs.get(login_url, timeout=15)
-        _log(f"GET status: {resp.status_code}")
-        resp.raise_for_status()
-        m = re.search(r'name="csrfmiddlewaretoken"\s+value="([^"]+)"', resp.text)
-        csrf = m.group(1) if m else rs.cookies.get("csrftoken", "")
-        _log(f"csrf from html: {'yes len=' + str(len(csrf)) if m else 'no, from cookie len=' + str(len(csrf))}")
-        _log(f"cookies before POST: { {c.name: c.value[:8] + '...' for c in rs.cookies} }")
-        post_resp = rs.post(
-            login_url,
-            data={
-                "username": NITA_USER,
-                "password": NITA_PASS,
-                "csrfmiddlewaretoken": csrf,
-                "next": "/admin/",
-            },
-            headers={"Referer": login_url},
-            allow_redirects=True,
-            timeout=15,
-        )
-        _log(f"POST status: {post_resp.status_code}  final_url: {post_resp.url}")
-        _log(f"cookies after POST: { {c.name: c.value[:8] + '...' for c in rs.cookies} }")
-        sessionid = rs.cookies.get("sessionid")
-        _log(f"sessionid: {'obtained' if sessionid else 'None — login failed'}")
-        if not sessionid:
-            _log(f"POST body snippet: {post_resp.text[:300]!r}")
-    except Exception as exc:
-        _log(f"login exception: {exc}")
-        yield None
-        return
+    # --- obtain a Django sessionid (prefer pre-created session from CI env) ---
+    # In CI, NITA_SESSION_KEY is set by a kubectl exec step that creates a
+    # session directly in the DB, bypassing the /admin/login/ endpoint.
+    sessionid = os.environ.get("NITA_SESSION_KEY")
+    if sessionid:
+        _log(f"using pre-created NITA_SESSION_KEY (len={len(sessionid)})")
+    else:
+        # Fall back to admin login form POST
+        try:
+            rs = requests.Session()
+            login_url = f"{BASE_URL}/admin/login/"
+            _log(f"GET {login_url}")
+            resp = rs.get(login_url, timeout=15)
+            _log(f"GET status: {resp.status_code}")
+            if resp.status_code != 200:
+                _log(f"non-200 body (first 800 chars): {resp.text[:800]!r}")
+            resp.raise_for_status()
+            m = re.search(r'name="csrfmiddlewaretoken"\s+value="([^"]+)"', resp.text)
+            csrf = m.group(1) if m else rs.cookies.get("csrftoken", "")
+            _log(f"csrf from html: {'yes len=' + str(len(csrf)) if m else 'no, from cookie len=' + str(len(csrf))}")
+            _log(f"cookies before POST: { {c.name: c.value[:8] + '...' for c in rs.cookies} }")
+            post_resp = rs.post(
+                login_url,
+                data={
+                    "username": NITA_USER,
+                    "password": NITA_PASS,
+                    "csrfmiddlewaretoken": csrf,
+                    "next": "/admin/",
+                },
+                headers={"Referer": login_url},
+                allow_redirects=True,
+                timeout=15,
+            )
+            _log(f"POST status: {post_resp.status_code}  final_url: {post_resp.url}")
+            _log(f"cookies after POST: { {c.name: c.value[:8] + '...' for c in rs.cookies} }")
+            sessionid = rs.cookies.get("sessionid")
+            _log(f"sessionid: {'obtained' if sessionid else 'None — login failed'}")
+            if not sessionid:
+                _log(f"POST body snippet: {post_resp.text[:300]!r}")
+        except Exception as exc:
+            _log(f"login exception: {exc}")
+            yield None
+            return
 
     if not sessionid:
         yield None
