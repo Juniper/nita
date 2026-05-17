@@ -314,6 +314,9 @@ jobs:
       - name: Install integration-test dependencies
         run: pip install -r requirements-integration-test.txt
 
+      - name: Install Playwright browser
+        run: playwright install chromium --with-deps
+
       - name: Start port-forward (webapp → localhost:8000)
         run: |
           kubectl port-forward svc/webapp 8000:8000 -n nita &
@@ -339,6 +342,14 @@ jobs:
           NITA_USER: vagrant
           NITA_PASS: vagrant123
         run: pytest -c pytest-integration.ini --tb=short -v
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nita-screenshots
+          path: ci-screenshots/
+          if-no-files-found: ignore
 
       - name: Dump webapp logs on failure
         if: failure() && steps.pytest.outcome == 'failure'
