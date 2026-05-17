@@ -280,7 +280,9 @@ def _browser_page(screenshot_dir):
     # --- launch Playwright, inject session cookie, yield the page -----------
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch()
+            _log("playwright: launching chromium")
+            browser = playwright.chromium.launch(args=["--no-sandbox"])
+            _log("playwright: chromium launched, creating context")
             context = browser.new_context()
             context.add_cookies(
                 [{"name": "sessionid", "value": sessionid, "url": BASE_URL}]
@@ -291,7 +293,7 @@ def _browser_page(screenshot_dir):
             context.close()
             browser.close()
     except Exception as exc:
-        _log(f"playwright exception: {exc}")
+        _log(f"playwright exception ({type(exc).__name__}): {exc!r}")
         yield None
 
 
