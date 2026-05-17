@@ -341,7 +341,17 @@ jobs:
           NITA_BASE_URL: http://localhost:8000
           NITA_USER: vagrant
           NITA_PASS: vagrant123
-        run: pytest -c pytest-integration.ini --tb=short -v
+        run: pytest -c pytest-integration.ini --tb=short -v --junitxml=test-results.xml 2>&1 | tee pytest-output.txt; exit ${PIPESTATUS[0]}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: |
+            test-results.xml
+            pytest-output.txt
+          if-no-files-found: ignore
 
       - name: Upload screenshots
         if: always()
