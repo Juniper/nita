@@ -32,7 +32,7 @@ spec:
             - name: DJANGO_LOG_LEVEL
               value: DEBUG
             - name: CSRF_TRUSTED_ORIGINS
-              value: "https://nita,https://100.123.0.16,https://192.168.43.128,https://localhost,http://localhost"
+              value: "${CSRF_TRUSTED_ORIGINS}"
           image: ${CONTAINER_REGISTRY}/nita-webapp:latest
           name: webapp
           readinessProbe:
