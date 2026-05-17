@@ -354,6 +354,17 @@ jobs:
           NITA_PASS: vagrant123
         run: pytest -c pytest-integration.ini --tb=short -v
 
+      - name: Capture webapp and jenkins logs into artifact
+        if: always()
+        run: |
+          mkdir -p ci-screenshots
+          echo "=== webapp pod logs ==="
+          kubectl logs -n nita -l io.kompose.service=webapp --tail=500 \
+            2>/dev/null > ci-screenshots/webapp.log || true
+          echo "=== jenkins pod logs ==="
+          kubectl logs -n nita -l io.kompose.service=jenkins --tail=200 \
+            2>/dev/null > ci-screenshots/jenkins.log || true
+
       - name: Upload GUI screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -392,12 +403,12 @@ jobs:
           ls -la "$GITHUB_WORKSPACE/ci-screenshots/" 2>/dev/null || echo "(directory not found)"
 
       - name: Dump webapp logs on failure
-        if: failure() && steps.pytest.outcome == 'failure'
+        if: always()
         run: |
-          echo "=== webapp pod logs (all) ==="
-          kubectl logs -n nita -l io.kompose.service=webapp --tail=500 2>/dev/null || true
-          echo "=== jenkins pod logs (last 100 lines) ==="
-          kubectl logs -n nita -l io.kompose.service=jenkins --tail=100 2>/dev/null || true
+          echo "=== webapp pod logs (tail 200) ==="
+          kubectl logs -n nita -l io.kompose.service=webapp --tail=200 2>/dev/null || true
+          echo "=== jenkins pod logs (tail 50) ==="
+          kubectl logs -n nita -l io.kompose.service=jenkins --tail=50 2>/dev/null || true
 
       - name: Stop port-forward
         if: always()
