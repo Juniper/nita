@@ -477,22 +477,59 @@ Question "Install Junos MCP server pod on port 8090" && {
         echo "${ME}: Skipping Junos MCP server install."
     else
 
-        if [ ! -d "${JUNOS_MCP_REPO}" ]; then
-            echo "${ME}: Cloning Junos MCP server repository to ${JUNOS_MCP_REPO}"
-            git clone https://github.com/Juniper/junos-mcp-server.git ${JUNOS_MCP_REPO}
-        else
-            echo "${ME}: Found existing Junos MCP repo at ${JUNOS_MCP_REPO}"
+        MCP_INSTALL_OK=true
+
+        # The MCP image is built locally before importing into containerd.
+        # Ensure docker is available at this stage of the installer.
+        if [ ! -x "$(command -v docker)" ]; then
+            echo "${ME}: Docker is required to build ${JUNOS_MCP_IMAGE}. Installing docker-ce now."
+            eval "${INSTALLER} docker-ce" || MCP_INSTALL_OK=false
         fi
 
-        echo "${ME}: Building local Junos MCP image ${JUNOS_MCP_IMAGE}"
-        docker build -t ${JUNOS_MCP_IMAGE} ${JUNOS_MCP_REPO}
+        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
+            systemctl enable docker >/dev/null 2>&1 || true
+            systemctl start docker >/dev/null 2>&1 || true
+            if ! docker info >/dev/null 2>&1; then
+                echo "${ME}: Error: Docker daemon is not running. Skipping Junos MCP server install."
+                MCP_INSTALL_OK=false
+            fi
+        fi
 
-        echo "${ME}: Exporting image archive ${JUNOS_MCP_IMAGE_ARCHIVE}"
-        rm -f ${JUNOS_MCP_IMAGE_ARCHIVE}
-        docker save ${JUNOS_MCP_IMAGE} -o ${JUNOS_MCP_IMAGE_ARCHIVE}
+        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
+            if [ ! -d "${JUNOS_MCP_REPO}" ]; then
+                echo "${ME}: Cloning Junos MCP server repository to ${JUNOS_MCP_REPO}"
+                git clone https://github.com/Juniper/junos-mcp-server.git ${JUNOS_MCP_REPO} || MCP_INSTALL_OK=false
+            else
+                echo "${ME}: Found existing Junos MCP repo at ${JUNOS_MCP_REPO}"
+            fi
+        fi
 
-        echo "${ME}: Importing image into containerd for Kubernetes"
-        ctr -n k8s.io images import ${JUNOS_MCP_IMAGE_ARCHIVE}
+        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
+            echo "${ME}: Building local Junos MCP image ${JUNOS_MCP_IMAGE}"
+            docker build -t ${JUNOS_MCP_IMAGE} ${JUNOS_MCP_REPO} || MCP_INSTALL_OK=false
+        fi
+
+        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
+            echo "${ME}: Exporting image archive ${JUNOS_MCP_IMAGE_ARCHIVE}"
+            rm -f ${JUNOS_MCP_IMAGE_ARCHIVE}
+            docker save ${JUNOS_MCP_IMAGE} -o ${JUNOS_MCP_IMAGE_ARCHIVE} || MCP_INSTALL_OK=false
+        fi
+
+        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
+            echo "${ME}: Importing image into containerd for Kubernetes"
+            ctr -n k8s.io images import ${JUNOS_MCP_IMAGE_ARCHIVE} || MCP_INSTALL_OK=false
+        fi
+
+        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
+            if ! ctr -n k8s.io images ls | grep -E 'junos-mcp-server.*local' >/dev/null 2>&1; then
+                echo "${ME}: Error: Imported image not found in containerd k8s.io namespace. Skipping deployment."
+                MCP_INSTALL_OK=false
+            fi
+        fi
+
+        if [ "X${MCP_INSTALL_OK}" != "Xtrue" ]; then
+            echo "${ME}: Error: Junos MCP image preparation failed. Deployment will not be applied."
+        else
 
         echo "${ME}: Creating/refreshing Junos MCP devices config map from ${JUNOS_MCP_DEVICES}"
         kubectl delete cm junos-mcp-devices-cm --namespace nita --ignore-not-found
@@ -503,6 +540,8 @@ Question "Install Junos MCP server pod on port 8090" && {
         kubectl apply -f ${K8SROOT}/junos-mcp-service.yaml
 
         echo "${ME}: Junos MCP server pod requested. Service endpoint is available on port 8090 inside namespace nita."
+
+        fi
 
     fi
 
