@@ -1,16 +1,36 @@
-# Network Implementation and Test Automation (NITA) 23.12
+# Network Implementation and Test Automation (NITA) 26.5
 
-Welcome to NITA 23.12
+Welcome to NITA 26.5
 
 NITA is an open source platform for automating the building and testing of complex networks.
 
 # Release Notes
 
-The major change in this version is that all components now run within pods under the control of Kubernetes, rather than as Docker containers. Consequently we have updated some infrastructure as well as the ``nita-cmd`` CLI to support Kubernetes.
+This release updates the NITA platform infrastructure to keep pace with
+upstream dependency changes and strengthens reliability through readiness
+probes, an expanded integration test suite, and improved CI diagnostics.
 
-We have also tested extensively on Ubuntu version 22.04.03 LTS and AlmaLinux 9.3 Server, either of which is required if you wish to use the new ``install.sh`` script. We recommend that your system has at least 8GB of free memory and 20GB of storage space.
+## 26.5 New Features and Bug Fixes
 
-For a list of previous features, bug fixes and other release details, please look at the [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/22.8/README.md#217-new-features-and-bug-fixes).
+* Upgraded MariaDB from 10.4.12 to 10.11, required by Django 5 and the
+  updated ``nita-webapp``.
+* Added ``readinessProbe`` to the webapp and database Kubernetes deployments
+  so that Kubernetes only routes traffic once each pod is fully initialised.
+* Fixed a missing ``get``, ``list`` and ``watch`` verb set in the
+  ``modify-pods`` ClusterRole that prevented Jenkins from querying pod state.
+* Added a full E2E API integration test suite (pytest) that runs against the
+  deployed Kubernetes stack as part of CI, covering authentication, network
+  type upload, network lifecycle and workbook operations.
+* Upgraded all GitHub Actions steps to Node.js 24 native action versions.
+* Improved CI diagnostic output on failure: rolling pod status, recent events,
+  and the last 500 lines of webapp and Jenkins pod logs are now captured
+  automatically when the integration tests fail.
+
+We recommend Ubuntu 22.04 LTS or AlmaLinux 9.3 Server and at least 8 GB of
+free memory and 20 GB of storage space.
+
+For a full list of webapp-level changes in this release, please refer to the
+[NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/main/README.md#265-new-features-and-bug-fixes).
 
 # Installation
 

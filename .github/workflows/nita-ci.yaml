@@ -4,17 +4,7 @@ name: NITA CI
 # config itself. Also available for manual dispatch.
 on:
   push:
-    paths:
-      - "k8s/**"
-      - "install.sh"
-      - ".github/workflows/nita-ci.yaml"
-      - ".github/kind-config.yaml"
-      - ".github/scripts/**"
   pull_request:
-    paths:
-      - "k8s/**"
-      - "install.sh"
-      - ".github/workflows/nita-ci.yaml"
   workflow_dispatch:
 
 # ---------------------------------------------------------------------------
@@ -27,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       - name: Install tools (gettext for envsubst, yamllint, kubeconform)
         run: |
@@ -48,20 +38,22 @@ jobs:
             k8s/*.yaml
 
       # kubeconform validates against the official Kubernetes OpenAPI schemas.
-      # envsubst resolves ${CONTAINER_REGISTRY} before validation so the image
-      # field is a valid string. -ignore-missing-schemas skips calico CRDs.
+      # envsubst resolves ${CONTAINER_REGISTRY} and ${CSRF_TRUSTED_ORIGINS}
+      # before validation so all fields are valid strings.
+      # -ignore-missing-schemas skips calico CRDs.
       - name: Kubernetes schema validation
         env:
           # Resolves to the repo owner's GHCR namespace so forks validate
           # against their own registry without any config changes.
           CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
+          CSRF_TRUSTED_ORIGINS: "https://localhost,http://localhost"
         run: |
           failed=0
           for f in k8s/*.yaml; do
             # calico.yaml is a redirect pointer, not a manifest — skip it
             [[ "${f}" == "k8s/calico.yaml" ]] && continue
             echo "Validating ${f} ..."
-            envsubst '${CONTAINER_REGISTRY}' < "${f}" \
+            envsubst '${CONTAINER_REGISTRY} ${CSRF_TRUSTED_ORIGINS}' < "${f}" \
               | kubeconform -strict -ignore-missing-schemas -summary - \
               || failed=1
           done
@@ -81,7 +73,7 @@ jobs:
       KEYPASS: nita123
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       # Set CONTAINER_REGISTRY to the repo owner's GHCR namespace (lowercased).
       # On the upstream repo this resolves to ghcr.io/aburston; on any fork it
@@ -111,7 +103,7 @@ jobs:
       # The config removes the control-plane taint (so pods can schedule on the
       # single node) and mounts the hostPath directories created above.
       - name: Create Kind cluster
-        uses: helm/kind-action@v1.10.0
+        uses: helm/kind-action@v1.14.0
         with:
           cluster_name: nita
           config: .github/kind-config.yaml
@@ -154,17 +146,28 @@ jobs:
 
       # Apply deployments and services. Notes:
       #   - webapp/jenkins use ${CONTAINER_REGISTRY} → envsubst required
+      #   - webapp also uses ${CSRF_TRUSTED_ORIGINS} → built from hostname/IPs
       #   - jenkins-service.yaml was exported from a live cluster and contains
       #     a hardcoded clusterIP, clusterIPs block, resourceVersion and uid.
       #     sed strips these fields so kubectl apply succeeds on a fresh cluster.
       - name: Apply deployments and services
         working-directory: k8s
         run: |
+          # Build CSRF_TRUSTED_ORIGINS from the runner's hostname and all IPs
+          _origins="https://localhost,http://localhost"
+          _host=$(hostname 2>/dev/null || true)
+          [[ -n "$_host" ]] && _origins="https://${_host},http://${_host},${_origins}"
+          for _ip in $(hostname -I 2>/dev/null); do
+            _origins="https://${_ip},http://${_ip},${_origins}"
+          done
+          export CSRF_TRUSTED_ORIGINS="${_origins}"
+          echo "CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}"
+
           kubectl apply -f db-service.yaml
           envsubst '${CONTAINER_REGISTRY}' < db-deployment.yaml      | kubectl apply -f -
 
           kubectl apply -f webapp-service.yaml
-          envsubst '${CONTAINER_REGISTRY}' < webapp-deployment.yaml   | kubectl apply -f -
+          envsubst '${CONTAINER_REGISTRY} ${CSRF_TRUSTED_ORIGINS}' < webapp-deployment.yaml | kubectl apply -f -
 
           # Clean live-cluster metadata from jenkins-service before applying
           sed \
@@ -311,3 +314,85 @@ jobs:
             echo "=== Logs: ${pod} ==="
             kubectl logs -n nita "${pod}" --tail=60 || true
           done
+
+      # ---------------------------------------------------------------------------
+      # API integration tests — run against the deployed stack
+      # ---------------------------------------------------------------------------
+
+      - name: Set up Python for integration tests
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install integration-test dependencies
+        run: pip install -r requirements-integration-test.txt
+
+      - name: Install Playwright browser
+        run: playwright install chromium --with-deps
+
+      - name: Start port-forward (webapp → localhost:8000)
+        run: |
+          kubectl port-forward svc/webapp 8000:8000 -n nita &
+          echo "PF_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Token invalid" \
+              http://localhost:8000/api/v1/networks/ 2>/dev/null || echo 000)
+            if [[ "$STATUS" == "401" || "$STATUS" == "403" ]]; then
+              echo "Webapp API is up (HTTP $STATUS)"
+              exit 0
+            fi
+            echo "  attempt $i: HTTP $STATUS, waiting..."
+            sleep 5
+          done
+          echo "ERROR: webapp API did not respond within 2.5 minutes"
+          exit 1
+
+      - name: Run pytest integration suite
+        id: pytest
+        env:
+          NITA_BASE_URL: http://localhost:8000
+          NITA_USER: vagrant
+          NITA_PASS: vagrant123
+        run: |
+          set -o pipefail
+          pytest -c pytest-integration.ini --tb=long -v --junitxml=test-results.xml 2>&1 | tee pytest-output.txt
+          PYTEST_EXIT=$?
+          echo '## Pytest Results' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -200 pytest-output.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit $PYTEST_EXIT
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: |
+            test-results.xml
+            pytest-output.txt
+          if-no-files-found: ignore
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nita-screenshots
+          path: ci-screenshots/
+          if-no-files-found: ignore
+
+      - name: Dump webapp logs on failure
+        if: failure() && steps.pytest.outcome == 'failure'
+        run: |
+          echo "=== webapp pod logs (all) ==="
+          kubectl logs -n nita -l io.kompose.service=webapp --tail=500 2>/dev/null || true
+          echo "=== jenkins pod logs (last 100 lines) ==="
+          kubectl logs -n nita -l io.kompose.service=jenkins --tail=100 2>/dev/null || true
+
+      - name: Stop port-forward
+        if: always()
+        run: |
+          if [[ -n "${PF_PID:-}" ]]; then
+            kill "${PF_PID}" 2>/dev/null || true
+          fi
