@@ -73,7 +73,7 @@ def api_session() -> requests.Session:
 
 @pytest.fixture(scope="session")
 def evpn_campus_type_id(api_session: requests.Session) -> int:
-    """Register ``evpn_vxlan_erb_dc_1.3`` as a CampusType by uploading a zip
+    """Register ``evpn_vxlan_erb_dc_1.4`` as a CampusType by uploading a zip
     containing ``project.yaml`` and ``ansible.cfg`` to
     ``POST /api/v1/network-types/upload/``.
 
@@ -84,7 +84,7 @@ def evpn_campus_type_id(api_session: requests.Session) -> int:
     import io
     import zipfile
 
-    project_name = "evpn_vxlan_erb_dc_1.3"
+    project_name = "evpn_vxlan_erb_dc_1.4"
 
     # --- idempotency check ---------------------------------------------------
     list_resp = api_session.get(
