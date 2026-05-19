@@ -117,6 +117,7 @@ jobs:
             "nginx:stable"
             "${CONTAINER_REGISTRY}/nita-webapp:latest"
             "${CONTAINER_REGISTRY}/nita-jenkins:latest"
+            "${CONTAINER_REGISTRY}/junos-mcp-server:latest"
           )
           for img in "${images[@]}"; do
             echo "==> Pulling ${img}"

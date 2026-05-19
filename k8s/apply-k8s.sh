@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/juniper}
+CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/aburston}
 export CONTAINER_REGISTRY
 
 # Build CSRF_TRUSTED_ORIGINS from the current hostname and all host IPs unless
