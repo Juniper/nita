@@ -8,12 +8,7 @@ metadata:
   labels:
     io.kompose.service: jenkins
   name: jenkins
-  resourceVersion: "1255458"
-  uid: 40478c56-8a2c-4777-b6ee-9a283ec4598f
 spec:
-  clusterIP: 10.104.250.46
-  clusterIPs:
-  - 10.104.250.46
   internalTrafficPolicy: Cluster
   ipFamilies:
   - IPv4

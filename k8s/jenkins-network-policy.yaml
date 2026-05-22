@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jenkins-network-policy
+  namespace: nita
+spec:
+  podSelector:
+    matchLabels:
+      io.kompose.service: jenkins
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8080
+          protocol: TCP
+      from:
+        - podSelector:
+            matchLabels:
+              io.kompose.service: webapp
+    - ports:
+        - port: 8443
+          protocol: TCP
