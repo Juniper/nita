@@ -17,6 +17,9 @@ spec:
         - podSelector:
             matchLabels:
               io.kompose.service: webapp
+        - podSelector:
+            matchLabels:
+              io.kompose.service: jenkins
     - ports:
         - port: 8443
           protocol: TCP
