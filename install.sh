@@ -37,6 +37,8 @@ JUNOS_MCP_DEVICES=${JUNOS_MCP_DEVICES:=$NITAROOT/nita/examples/mcp/devices.json}
 JUNOS_MCP_REPO=${JUNOS_MCP_REPO:=$NITAROOT/junos-mcp-server}
 JUNOS_MCP_IMAGE=${JUNOS_MCP_IMAGE:=junos-mcp-server:local}
 JUNOS_MCP_IMAGE_ARCHIVE=${JUNOS_MCP_IMAGE_ARCHIVE:=/tmp/junos-mcp-server-local.tar}
+JUNOS_MCP_TOKEN_ID=${JUNOS_MCP_TOKEN_ID:=nita-lab}
+JUNOS_MCP_TOKEN_VALUE=${JUNOS_MCP_TOKEN_VALUE:=}
 KEYPASS=${KEYPASS:="nita123"}
 
 KUBEROOT=${KUBEROOT:=/etc/kubernetes}
@@ -44,7 +46,7 @@ KUBECONFIG=${KUBECONFIG:=$KUBEROOT/admin.conf}
 
 PATH=${PATH}:${JAVA_HOME}/bin
 export OWNER_HOME=`egrep "^${REALUSER}" /etc/passwd | awk -F: '{print $6}'`
-export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_REPO JUNOS_MCP_IMAGE JUNOS_MCP_IMAGE_ARCHIVE KEYPASS KUBECONFIG JAVA_HOME CONTAINER_REGISTRY GITHUB_ORG NITA_ANSIBLE_IMAGE NITA_ROBOT_IMAGE
+export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_REPO JUNOS_MCP_IMAGE JUNOS_MCP_IMAGE_ARCHIVE JUNOS_MCP_TOKEN_ID JUNOS_MCP_TOKEN_VALUE KEYPASS KUBECONFIG JAVA_HOME CONTAINER_REGISTRY GITHUB_ORG NITA_ANSIBLE_IMAGE NITA_ROBOT_IMAGE
 
 CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/juniper}
 GITHUB_ORG=${GITHUB_ORG:=Juniper}
@@ -535,11 +537,58 @@ Question "Install Junos MCP server pod on port 8090" && {
         kubectl delete cm junos-mcp-devices-cm --namespace nita --ignore-not-found
         kubectl create cm junos-mcp-devices-cm --from-file=devices.json=${JUNOS_MCP_DEVICES} --namespace nita
 
+        if [ -z "${JUNOS_MCP_TOKEN_VALUE}" ]; then
+            if [ -x "$(command -v openssl)" ]; then
+                JUNOS_MCP_TOKEN_VALUE="jmcp_$(openssl rand -hex 24)"
+            else
+                JUNOS_MCP_TOKEN_VALUE="jmcp_$(date +%s)_${RANDOM}${RANDOM}"
+            fi
+        fi
+
+        JUNOS_MCP_TOKEN_FILE=$(mktemp /tmp/junos-mcp-tokens.XXXXXX)
+        JUNOS_MCP_PROXY_CONF=$(mktemp /tmp/junos-mcp-nginx.XXXXXX)
+
+        cat > ${JUNOS_MCP_TOKEN_FILE} <<EOF
+{
+  "${JUNOS_MCP_TOKEN_ID}": {
+    "token": "${JUNOS_MCP_TOKEN_VALUE}",
+    "description": "NITA lab/demo internal token",
+    "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  }
+}
+EOF
+
+        cat > ${JUNOS_MCP_PROXY_CONF} <<EOF
+server {
+    listen 8090;
+    location /mcp {
+        rewrite ^/mcp$ /mcp/ break;
+        proxy_pass http://127.0.0.1:8091;
+        proxy_http_version 1.1;
+        proxy_set_header Authorization "Bearer ${JUNOS_MCP_TOKEN_VALUE}";
+        proxy_set_header Accept \$http_accept;
+        proxy_set_header Content-Type \$content_type;
+        proxy_set_header Host \$host;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600;
+    }
+}
+EOF
+
+        echo "${ME}: Creating/refreshing Junos MCP authentication secret and proxy config"
+        kubectl delete secret junos-mcp-auth --namespace nita --ignore-not-found
+        kubectl create secret generic junos-mcp-auth --from-file=.tokens=${JUNOS_MCP_TOKEN_FILE} --namespace nita
+        kubectl delete cm junos-mcp-proxy-cm --namespace nita --ignore-not-found
+        kubectl create cm junos-mcp-proxy-cm --from-file=default.conf=${JUNOS_MCP_PROXY_CONF} --namespace nita
+        rm -f ${JUNOS_MCP_TOKEN_FILE} ${JUNOS_MCP_PROXY_CONF}
+
         echo "${ME}: Applying Junos MCP server deployment and service"
         kubectl apply -f ${K8SROOT}/junos-mcp-deployment.yaml
         kubectl apply -f ${K8SROOT}/junos-mcp-service.yaml
 
-        echo "${ME}: Junos MCP server pod requested. Service endpoint is available on port 8090 inside namespace nita."
+        echo "${ME}: Junos MCP server pod requested. Service endpoint is available on port 8090 inside namespace nita and on the node IP for unauthenticated lab/demo access."
 
         fi
 
