@@ -86,7 +86,10 @@ If you answer ``Y``, the installer will:
 2. Build a local Docker image named ``junos-mcp-server:local``
 3. Import the image into Kubernetes' containerd runtime
 4. Create a ConfigMap from the default device mapping file at ``$JUNOS_MCP_DEVICES`` (default: ``/opt/nita/examples/mcp/devices.json``)
-5. Deploy the MCP server pod and service in the ``nita`` namespace, listening on port 8090
+5. Generate an internal MCP token plus an nginx proxy config for lab/demo use
+6. Deploy the MCP server pod and service in the ``nita`` namespace, listening on port 8090
+
+For the packaged NITA lab/demo deployment, the MCP backend stays token-protected on loopback inside the pod and an nginx sidecar listens on port 8090, injecting the internal token on behalf of clients. This keeps the upstream MCP server in its supported authenticated mode while allowing off-box demo access without per-user token setup.
 
 ### Default Device List
 
@@ -117,9 +120,65 @@ kubectl -n nita get svc junos-mcp -o wide
 
 # View server logs
 kubectl -n nita logs deploy/junos-mcp --tail=100
+
+# View proxy logs
+kubectl -n nita logs deploy/junos-mcp -c junos-mcp-proxy --tail=100
 ```
 
 The MCP server will be accessible at ``http://<node-ip>:8090/mcp/`` from any client on the network.
+
+The upstream MCP server still enforces token authentication on its streamable HTTP transport. NITA hides that token behind the in-pod proxy for lab/demo installs. If you prefer explicit client authentication instead, replace the proxy flow with a mounted ``.tokens`` file and send ``Authorization: Bearer <token>`` from the client.
+
+### Refreshing MCP Auth And Proxy Resources
+
+If you change the device map, need to recreate the MCP proxy configuration, or want to force a known internal token for troubleshooting, you can refresh the Kubernetes resources manually:
+
+```
+export JMCP_TOKEN_ID=nita-lab
+export JMCP_TOKEN_VALUE="jmcp_change_me"
+
+cat >/tmp/junos-mcp-tokens.json <<EOF
+{
+  "${JMCP_TOKEN_ID}": {
+    "token": "${JMCP_TOKEN_VALUE}",
+    "description": "NITA lab/demo internal token",
+    "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  }
+}
+EOF
+
+cat >/tmp/junos-mcp-nginx.conf <<EOF
+server {
+    listen 8090;
+  location /mcp {
+    rewrite ^/mcp$ /mcp/ break;
+        proxy_pass http://127.0.0.1:8091;
+        proxy_http_version 1.1;
+        proxy_set_header Authorization "Bearer ${JMCP_TOKEN_VALUE}";
+      proxy_set_header Accept \$http_accept;
+      proxy_set_header Content-Type \$content_type;
+      proxy_set_header Host \$host;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_read_timeout 3600;
+    }
+}
+EOF
+
+kubectl -n nita delete secret junos-mcp-auth --ignore-not-found
+kubectl -n nita create secret generic junos-mcp-auth \
+  --from-file=.tokens=/tmp/junos-mcp-tokens.json
+
+kubectl -n nita delete cm junos-mcp-proxy-cm --ignore-not-found
+kubectl -n nita create cm junos-mcp-proxy-cm \
+  --from-file=default.conf=/tmp/junos-mcp-nginx.conf
+
+kubectl -n nita rollout restart deploy/junos-mcp
+kubectl -n nita rollout status deploy/junos-mcp
+```
+
+The internal token is only used by the in-pod nginx proxy. Off-box clients still connect to ``http://<node-ip>:8090/mcp/`` without sending any ``Authorization`` header.
 
 # History
 

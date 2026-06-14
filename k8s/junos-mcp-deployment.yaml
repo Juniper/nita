@@ -10,6 +10,8 @@ spec:
   selector:
     matchLabels:
       app: junos-mcp
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -26,17 +28,37 @@ spec:
             - "-t"
             - "streamable-http"
             - "-H"
-            - "0.0.0.0"
+            - "127.0.0.1"
             - "-p"
-            - "8090"
+            - "8091"
+          ports:
+            - containerPort: 8091
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - import socket; socket.create_connection(("127.0.0.1", 8091), 1).close()
+            initialDelaySeconds: 2
+            periodSeconds: 2
+          volumeMounts:
+            - name: devices-config
+              mountPath: /app/config/devices.json
+              subPath: devices.json
+            - name: auth-tokens
+              mountPath: /app/.tokens
+              subPath: .tokens
+        - name: junos-mcp-proxy
+          image: nginx:stable
           ports:
             - containerPort: 8090
               hostPort: 8090
               protocol: TCP
           volumeMounts:
-            - name: devices-config
-              mountPath: /app/config/devices.json
-              subPath: devices.json
+            - name: proxy-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
       restartPolicy: Always
       volumes:
         - name: devices-config
@@ -45,3 +67,15 @@ spec:
             items:
               - key: devices.json
                 path: devices.json
+        - name: auth-tokens
+          secret:
+            secretName: junos-mcp-auth
+            items:
+              - key: .tokens
+                path: .tokens
+        - name: proxy-config
+          configMap:
+            name: junos-mcp-proxy-cm
+            items:
+              - key: default.conf
+                path: default.conf
