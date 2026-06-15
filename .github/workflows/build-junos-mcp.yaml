@@ -41,13 +41,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Compute lowercase image repository
+        id: image
+        run: |
+          owner="${{ github.repository_owner }}"
+          echo "repo=ghcr.io/${owner,,}/junos-mcp-server" >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: /tmp/junos-mcp-server
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/junos-mcp-server:latest
+            ${{ steps.image.outputs.repo }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/Juniper/junos-mcp-server
             org.opencontainers.image.description=Junos MCP server built for NITA
