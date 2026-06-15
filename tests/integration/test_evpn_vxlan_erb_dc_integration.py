@@ -9,7 +9,7 @@ mock layers.
 
 Prerequisites (set up by the CI workflow before running pytest):
   • The webapp is reachable at ``NITA_BASE_URL`` (default http://localhost:8000).
-  • The ``evpn_vxlan_erb_dc_1.3`` CampusType has been seeded via
+  • The ``evpn_vxlan_erb_dc_1.4`` CampusType has been seeded via
     ``manage.py seed_evpn_fixture``.
   • ``EVPN_FIXTURE_DIR`` points at a directory with ``project.yaml``,
     ``dc1-hosts``, ``dc2-hosts``, and ``dc1_data.xlsx``.
@@ -59,7 +59,7 @@ def test_project_campus_type_visible_in_list(api_session, evpn_campus_type_id):
     resp = api_session.get(f"{BASE_URL}/api/v1/network-types/", timeout=30)
     assert resp.status_code == 200
     names = [r["name"] for r in resp.json()["results"]]
-    assert "evpn_vxlan_erb_dc_1.3" in names
+    assert "evpn_vxlan_erb_dc_1.4" in names
 
 
 @pytest.mark.integration
@@ -70,7 +70,7 @@ def test_project_campus_type_retrieve(api_session, evpn_campus_type_id):
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["name"] == "evpn_vxlan_erb_dc_1.3"
+    assert data["name"] == "evpn_vxlan_erb_dc_1.4"
     assert data["description"] == "EVPN VLXAN ERB Data Center"
     assert "roles" in data
     assert "resources" in data
@@ -395,7 +395,7 @@ def test_network_retrieve_returns_campus_type_name(api_session, evpn_network):
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["campus_type_name"] == "evpn_vxlan_erb_dc_1.3"
+    assert data["campus_type_name"] == "evpn_vxlan_erb_dc_1.4"
 
 
 @pytest.mark.integration

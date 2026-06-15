@@ -35,7 +35,6 @@ CERTS=${CERTS:=$PROXY/certificates}
 JENKINS=${JENKINS:=/var/jenkins_home}
 JUNOS_MCP_DEVICES=${JUNOS_MCP_DEVICES:=$NITAROOT/nita/examples/mcp/devices.json}
 JUNOS_MCP_REPO=${JUNOS_MCP_REPO:=$NITAROOT/junos-mcp-server}
-JUNOS_MCP_IMAGE=${JUNOS_MCP_IMAGE:=junos-mcp-server:local}
 JUNOS_MCP_IMAGE_ARCHIVE=${JUNOS_MCP_IMAGE_ARCHIVE:=/tmp/junos-mcp-server-local.tar}
 JUNOS_MCP_TOKEN_ID=${JUNOS_MCP_TOKEN_ID:=nita-lab}
 JUNOS_MCP_TOKEN_VALUE=${JUNOS_MCP_TOKEN_VALUE:=}
@@ -48,8 +47,9 @@ PATH=${PATH}:${JAVA_HOME}/bin
 export OWNER_HOME=`egrep "^${REALUSER}" /etc/passwd | awk -F: '{print $6}'`
 export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_REPO JUNOS_MCP_IMAGE JUNOS_MCP_IMAGE_ARCHIVE JUNOS_MCP_TOKEN_ID JUNOS_MCP_TOKEN_VALUE KEYPASS KUBECONFIG JAVA_HOME CONTAINER_REGISTRY GITHUB_ORG NITA_ANSIBLE_IMAGE NITA_ROBOT_IMAGE
 
-CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/juniper}
-GITHUB_ORG=${GITHUB_ORG:=Juniper}
+CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/aburston}
+GITHUB_ORG=${GITHUB_ORG:=aburston}
+JUNOS_MCP_IMAGE=${JUNOS_MCP_IMAGE:=${CONTAINER_REGISTRY}/junos-mcp-server:latest}
 
 NITA_ANSIBLE_IMAGE="${CONTAINER_REGISTRY}/nita-ansible:latest"
 NITA_ROBOT_IMAGE="${CONTAINER_REGISTRY}/nita-robot:latest"
@@ -479,60 +479,6 @@ Question "Install Junos MCP server pod on port 8090" && {
         echo "${ME}: Skipping Junos MCP server install."
     else
 
-        MCP_INSTALL_OK=true
-
-        # The MCP image is built locally before importing into containerd.
-        # Ensure docker is available at this stage of the installer.
-        if [ ! -x "$(command -v docker)" ]; then
-            echo "${ME}: Docker is required to build ${JUNOS_MCP_IMAGE}. Installing docker-ce now."
-            eval "${INSTALLER} docker-ce" || MCP_INSTALL_OK=false
-        fi
-
-        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
-            systemctl enable docker >/dev/null 2>&1 || true
-            systemctl start docker >/dev/null 2>&1 || true
-            if ! docker info >/dev/null 2>&1; then
-                echo "${ME}: Error: Docker daemon is not running. Skipping Junos MCP server install."
-                MCP_INSTALL_OK=false
-            fi
-        fi
-
-        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
-            if [ ! -d "${JUNOS_MCP_REPO}" ]; then
-                echo "${ME}: Cloning Junos MCP server repository to ${JUNOS_MCP_REPO}"
-                git clone https://github.com/Juniper/junos-mcp-server.git ${JUNOS_MCP_REPO} || MCP_INSTALL_OK=false
-            else
-                echo "${ME}: Found existing Junos MCP repo at ${JUNOS_MCP_REPO}"
-            fi
-        fi
-
-        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
-            echo "${ME}: Building local Junos MCP image ${JUNOS_MCP_IMAGE}"
-            docker build -t ${JUNOS_MCP_IMAGE} ${JUNOS_MCP_REPO} || MCP_INSTALL_OK=false
-        fi
-
-        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
-            echo "${ME}: Exporting image archive ${JUNOS_MCP_IMAGE_ARCHIVE}"
-            rm -f ${JUNOS_MCP_IMAGE_ARCHIVE}
-            docker save ${JUNOS_MCP_IMAGE} -o ${JUNOS_MCP_IMAGE_ARCHIVE} || MCP_INSTALL_OK=false
-        fi
-
-        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
-            echo "${ME}: Importing image into containerd for Kubernetes"
-            ctr -n k8s.io images import ${JUNOS_MCP_IMAGE_ARCHIVE} || MCP_INSTALL_OK=false
-        fi
-
-        if [ "X${MCP_INSTALL_OK}" = "Xtrue" ]; then
-            if ! ctr -n k8s.io images ls | grep -E 'junos-mcp-server.*local' >/dev/null 2>&1; then
-                echo "${ME}: Error: Imported image not found in containerd k8s.io namespace. Skipping deployment."
-                MCP_INSTALL_OK=false
-            fi
-        fi
-
-        if [ "X${MCP_INSTALL_OK}" != "Xtrue" ]; then
-            echo "${ME}: Error: Junos MCP image preparation failed. Deployment will not be applied."
-        else
-
         echo "${ME}: Creating/refreshing Junos MCP devices config map from ${JUNOS_MCP_DEVICES}"
         kubectl delete cm junos-mcp-devices-cm --namespace nita --ignore-not-found
         kubectl create cm junos-mcp-devices-cm --from-file=devices.json=${JUNOS_MCP_DEVICES} --namespace nita
@@ -589,8 +535,6 @@ EOF
         kubectl apply -f ${K8SROOT}/junos-mcp-service.yaml
 
         echo "${ME}: Junos MCP server pod requested. Service endpoint is available on port 8090 inside namespace nita and on the node IP for unauthenticated lab/demo access."
-
-        fi
 
     fi
 

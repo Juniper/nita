@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/juniper}
+CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/aburston}
 export CONTAINER_REGISTRY
 
 # Build CSRF_TRUSTED_ORIGINS from the current hostname and all host IPs unless
@@ -21,7 +21,7 @@ echo "Please be sure you are in the same folder as the yaml files"
 echo "Using container registry: ${CONTAINER_REGISTRY}"
 echo "Using CSRF trusted origins: ${CSRF_TRUSTED_ORIGINS}"
 
-FILES="nita-namespace.yaml pv.yaml pv2.yaml mariadb-persistentvolumeclaim.yaml jenkins-home-persistentvolumeclaim.yaml cluster-role.yaml db-deployment.yaml db-service.yaml jenkins-deployment.yaml jenkins-service.yaml proxy-deployment.yaml role-binding.yaml service-account.yaml storageClass.yaml webapp-deployment.yaml webapp-service.yaml"
+FILES="nita-namespace.yaml pv.yaml pv2.yaml mariadb-persistentvolumeclaim.yaml jenkins-home-persistentvolumeclaim.yaml cluster-role.yaml db-deployment.yaml db-service.yaml jenkins-deployment.yaml jenkins-service.yaml proxy-deployment.yaml role-binding.yaml service-account.yaml storageClass.yaml webapp-deployment.yaml webapp-service.yaml junos-mcp-deployment.yaml junos-mcp-service.yaml"
 
 for f in ${FILES}; do
     envsubst '${CONTAINER_REGISTRY} ${CSRF_TRUSTED_ORIGINS}' < ${f} | kubectl apply -f -

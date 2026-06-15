@@ -19,8 +19,8 @@ spec:
     spec:
       containers:
         - name: junos-mcp
-          image: junos-mcp-server:local
-          imagePullPolicy: Never
+          image: ${CONTAINER_REGISTRY}/junos-mcp-server:latest
+          imagePullPolicy: IfNotPresent
           command: ["python", "jmcp.py"]
           args:
             - "-f"

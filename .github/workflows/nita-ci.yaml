@@ -124,6 +124,24 @@ jobs:
             kind load docker-image "${img}" --name nita
           done
 
+      # Build junos-mcp-server locally from upstream source and load it into
+      # Kind. We build here rather than pulling from GHCR because the image is
+      # only published to a namespace by the separate build-junos-mcp workflow;
+      # on the upstream repo (and on first-time forks) that package may not yet
+      # exist, which would make `docker pull` fail with "denied". Building keeps
+      # the e2e job self-contained. The tag matches the manifest reference
+      # (${CONTAINER_REGISTRY}/junos-mcp-server:latest) and the deployment uses
+      # imagePullPolicy: IfNotPresent, so the loaded image is used as-is.
+      - name: Build and load junos-mcp-server into Kind
+        run: |
+          git clone --depth 1 https://github.com/Juniper/junos-mcp-server.git \
+            /tmp/junos-mcp-server
+          docker build \
+            -t "${CONTAINER_REGISTRY}/junos-mcp-server:latest" \
+            /tmp/junos-mcp-server
+          kind load docker-image \
+            "${CONTAINER_REGISTRY}/junos-mcp-server:latest" --name nita
+
       # Apply resources with no ConfigMap dependencies first:
       # namespace → storage (SC, PVs, PVCs) → RBAC
       - name: Apply namespace, storage, and RBAC manifests
