@@ -109,7 +109,10 @@ def evpn_campus_type_id(api_session: requests.Session) -> int:
         files={"app_zip_file": (f"{project_name}.zip", buf, "application/zip")},
         timeout=180,   # Jenkins job must validate and store the zip
     )
-    assert resp.status_code == 200, (
+    # The upload is non-blocking: it queues the ``network_type_validator``
+    # Jenkins job and returns ``202 Accepted`` (older webapp images returned
+    # ``200``).
+    assert resp.status_code in (200, 202), (
         f"Project upload failed ({resp.status_code}): {resp.text}"
     )
     body = resp.json()
@@ -177,7 +180,7 @@ def evpn_network_with_workbook(api_session: requests.Session, evpn_network: dict
     with (FIXTURE_DIR / "dc1_data.xlsx").open("rb") as fh:
         upload_resp = api_session.post(
             f"{BASE_URL}/api/v1/networks/{evpn_network['id']}/workbook/upload/",
-            files={"up_file": ("dc1_data.xlsx", fh, "application/octet-stream")},
+            files={"file": ("dc1_data.xlsx", fh, "application/octet-stream")},
             timeout=60,
         )
     assert upload_resp.status_code == 200, (

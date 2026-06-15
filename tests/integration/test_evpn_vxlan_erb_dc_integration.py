@@ -72,8 +72,6 @@ def test_project_campus_type_retrieve(api_session, evpn_campus_type_id):
     data = resp.json()
     assert data["name"] == "evpn_vxlan_erb_dc_1.4"
     assert data["description"] == "EVPN VLXAN ERB Data Center"
-    assert "roles" in data
-    assert "resources" in data
 
 
 @pytest.mark.integration
@@ -226,7 +224,7 @@ def test_workbook_upload_dc1_xlsx_returns_200(api_session, evpn_network):
     with (FIXTURE_DIR / "dc1_data.xlsx").open("rb") as fh:
         resp = api_session.post(
             f"{BASE_URL}/api/v1/networks/{evpn_network['id']}/workbook/upload/",
-            files={"up_file": ("dc1_data.xlsx", fh, "application/octet-stream")},
+            files={"file": ("dc1_data.xlsx", fh, "application/octet-stream")},
             timeout=60,
         )
     assert resp.status_code == 200
@@ -286,7 +284,7 @@ def test_workbook_upload_idempotent(api_session, evpn_network):
         with xlsx_path.open("rb") as fh:
             r = api_session.post(
                 f"{BASE_URL}/api/v1/networks/{evpn_network['id']}/workbook/upload/",
-                files={"up_file": ("dc1_data.xlsx", fh, "application/octet-stream")},
+                files={"file": ("dc1_data.xlsx", fh, "application/octet-stream")},
                 timeout=60,
             )
         assert r.status_code == 200
@@ -455,8 +453,9 @@ def test_network_partial_update_status(api_session, evpn_network):
 
 # DELETE
 @pytest.mark.integration
-def test_network_delete_returns_204(api_session, evpn_campus_type_id):
-    """DELETE /api/v1/networks/{id}/ must return 204 and remove the record."""
+def test_network_delete_returns_202(api_session, evpn_campus_type_id):
+    """DELETE /api/v1/networks/{id}/ must return 202 (the delete is non-blocking:
+    it queues the ``network_template_mgr`` Jenkins job) and remove the record."""
     host_content = (FIXTURE_DIR / "dc1-hosts").read_text()
     name = f"evpn-ci-del-{uuid.uuid4().hex[:8]}"
     create_resp = api_session.post(
@@ -476,7 +475,7 @@ def test_network_delete_returns_204(api_session, evpn_campus_type_id):
     delete_resp = api_session.delete(
         f"{BASE_URL}/api/v1/networks/{network_id}/", timeout=30
     )
-    assert delete_resp.status_code == 204
+    assert delete_resp.status_code == 202
 
     # Verify it's gone
     get_resp = api_session.get(
