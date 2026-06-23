@@ -17,6 +17,15 @@ $ sudo kubeadm certs renew all
 $ sudo systemctl restart kubelet
 ```
 
+You can also use NITA CLI to run this flow:
+
+```
+$ sudo nita-cmd kube renew-certs
+```
+
+This command uses `kubeadm certs renew all` and then restarts `kubelet` when
+`systemctl` is available.
+
 :warning: Be aware that the 1-year duration for Kubernetes certificates seems to be hardcoded in the `kubeadm` command, so you will need to remember to renew them on an annual basis.
 
 ## Zscaler, Certificates and K8S

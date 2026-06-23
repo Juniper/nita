@@ -58,6 +58,19 @@ $ nita-cmd containers help
 
 This example shows that it is possible to see the list of all running Docker containers and the versions of all of those containers. Typing ``nita-cmd containers list`` is much easier than having to remember the full Docker command that you need to type!
 
+## Kubernetes Certificate Renewal
+
+For kubeadm-managed Kubernetes deployments, certificate renewal can be run with:
+
+```shell
+$ sudo nita-cmd kube renew-certs
+```
+
+This command runs ``kubeadm certs renew all`` and restarts ``kubelet`` when
+``systemctl`` is available.
+
+If ``kubeadm`` is not installed, the command exits with an error.
+
 # CREATING YOUR OWN COMMAND
 
 Because the ``nita-cmd`` script is actually a wrapper for executing other scripts, its functionality can easily be extended just be adding new scripts for it to execute. You do this by prefixing the name of your new executable shell script with ``nita-cmd_`` and storing it in the directory ``/usr/local/bin``. You can also add multiple levels to the command simply by creating multiple scripts with underscores between each argument in the filename.
@@ -72,7 +85,7 @@ Given that ``/usr/local/bin`` is owned by root, we will need sudo access in orde
 $ pwd
 /usr/local/bin
 $ sudo vi nita-cmd_hello
-[sudo] password for jcluser: 
+[sudo] password for jcluser:
 $ cat nita-cmd_hello
 #!/bin/bash
 if [ "$_CLI_RUNNER_DEBUG" == 1 ]; then
@@ -83,7 +96,7 @@ fi
 # This is the actual command that you want to wrap with the cli...
 echo "Hello World!" >&1
 $ sudo chmod +x nita-cmd_hello
-$ 
+$
 ```
 Add inline debugging by setting the environment variable ``_CLI_RUNNER_DEBUG`` in the parent shell, like this:
 ```shell
@@ -100,7 +113,7 @@ At the same time as you create a new command, you should also add a correspondin
 $ pwd
 /usr/local/bin
 $ sudo vi nita-cmd_hello_help
-[sudo] password for jcluser: 
+[sudo] password for jcluser:
 $ cat nita-cmd_hello_help
 #!/bin/bash
 echo -n "    nita-cmd hello => "
@@ -138,8 +151,8 @@ And if you press &lt;tab&gt; again...
 
 ```shell
 $ nita-cmd jenkins <tab>
-backup   down     jobs     logs     ports    restore  start    stop     version  whoami   
-cli      ips      labels   plugins  restart  set      status   up       volumes 
+backup   down     jobs     logs     ports    restore  start    stop     version  whoami
+cli      ips      labels   plugins  restart  set      status   up       volumes
 ```
 You get the idea.
 
@@ -150,7 +163,7 @@ To see which version of NITA you are running, type the command ``nita-cmd cli ve
 ```shell
 $ nita-cmd cli version
 nita-cli 22.8
-$ 
+$
 ```
 
 # SEE ALSO
