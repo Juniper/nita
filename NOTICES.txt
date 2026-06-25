@@ -26,9 +26,9 @@ Name: git
 URL: https://git-scm.com/
 License: https://git-scm.com/about/free-and-open-source
 
-Name: openjdk-19-jre-headless
-URL: https://packages.ubuntu.com/jammy/openjdk-19-jre-headless
-License: https://changelogs.ubuntu.com/changelogs/pool/universe/o/openjdk-19/openjdk-19_19.0.2+7-0ubuntu3~22.04/copyright
+Name: openjdk-21-jre-headless
+URL: https://packages.ubuntu.com/jammy/openjdk-21-jre-headless
+License: https://changelogs.ubuntu.com/changelogs/pool/universe/o/openjdk-21/openjdk-21_21.0.11+10-1~22.04.2/copyright
 
 Name: socat
 URL: http://www.dest-unreach.org/socat/
