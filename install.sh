@@ -403,10 +403,8 @@ Question "Install NITA repositories" && {
 
     cd  ${K8SROOT}
 
-    echo "${ME}: Applying base Kubernetes resources"
-    for f in nita-namespace.yaml storageClass.yaml pv.yaml pv2.yaml mariadb-persistentvolumeclaim.yaml jenkins-home-persistentvolumeclaim.yaml service-account.yaml cluster-role.yaml role-binding.yaml; do
-        kubectl apply -f ${f} || exit 1
-    done
+    echo "${ME}: Applying NITA namespace"
+    kubectl apply -f nita-namespace.yaml || exit 1
 
     mkdir -p ${PROXY}
     wget --inet4-only https://raw.githubusercontent.com/${GITHUB_ORG}/nita-webapp/main/nginx/nginx.conf -O ${PROXY}/nginx.conf

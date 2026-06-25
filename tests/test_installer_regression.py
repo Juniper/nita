@@ -18,10 +18,9 @@ class InstallerRegressionTests(unittest.TestCase):
         self.assertNotIn("openjdk-19-jre-headless", self.install_text)
 
     def test_jdk_19_java_home_is_not_global_default(self):
-        self.assertNotRegex(
+        self.assertNotIn(
+            "JAVA_HOME=${JAVA_HOME:=$NITAROOT/jdk-19.0.1}",
             self.install_text,
-            r"^JAVA_HOME=\$\{JAVA_HOME:=\$NITAROOT/jdk-19\.0\.1\}",
-            msg="AlmaLinux tarball JAVA_HOME must not be the global default",
         )
 
     def test_core_configmaps_are_created_before_core_apply(self):
@@ -40,11 +39,19 @@ class InstallerRegressionTests(unittest.TestCase):
             )
 
     def test_core_apply_excludes_optional_junos_mcp_manifests(self):
-        files_match = re.search(r'^FILES="([^"]+)"', self.apply_text, re.MULTILINE)
-        self.assertIsNotNone(files_match, "apply-k8s.sh should define FILES")
-        files = files_match.group(1).split()
-        self.assertNotIn("junos-mcp-deployment.yaml", files)
-        self.assertNotIn("junos-mcp-service.yaml", files)
+        for variable in ("BASE_FILES", "WORKLOAD_FILES"):
+            files_match = re.search(
+                rf'^{variable}="([^"]+)"',
+                self.apply_text,
+                re.MULTILINE,
+            )
+            self.assertIsNotNone(
+                files_match,
+                f"apply-k8s.sh should define {variable}",
+            )
+            files = files_match.group(1).split()
+            self.assertNotIn("junos-mcp-deployment.yaml", files)
+            self.assertNotIn("junos-mcp-service.yaml", files)
 
     def test_core_apply_preflights_required_configmaps(self):
         for name in (
