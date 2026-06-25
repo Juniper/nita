@@ -27,7 +27,7 @@ NITAROOT=${NITAROOT:=/opt}              # Where to install NITA
 NITAPROJECT=${NITAPROJECT:=/var/nita_project}    # Home of NITA project files
 BINDIR=${BINDIR:=/usr/local/bin}        # Where to put binaries
 BASH_COMPLETION=${BASH_COMPLETION:="/etc/bash_completion.d"}
-JAVA_HOME=${JAVA_HOME:=$NITAROOT/jdk-19.0.1}
+JAVA_HOME=${JAVA_HOME:=}
 
 K8SROOT=${K8SROOT:=$NITAROOT/nita/k8s}
 PROXY=${PROXY:=$K8SROOT/proxy}
@@ -43,7 +43,7 @@ KEYPASS=${KEYPASS:="nita123"}
 KUBEROOT=${KUBEROOT:=/etc/kubernetes}
 KUBECONFIG=${KUBECONFIG:=$KUBEROOT/admin.conf}
 
-PATH=${PATH}:${JAVA_HOME}/bin
+[ -n "${JAVA_HOME}" ] && PATH=${PATH}:${JAVA_HOME}/bin
 export OWNER_HOME=`egrep "^${REALUSER}" /etc/passwd | awk -F: '{print $6}'`
 export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_REPO JUNOS_MCP_IMAGE JUNOS_MCP_IMAGE_ARCHIVE JUNOS_MCP_TOKEN_ID JUNOS_MCP_TOKEN_VALUE KEYPASS KUBECONFIG JAVA_HOME CONTAINER_REGISTRY GITHUB_ORG NITA_ANSIBLE_IMAGE NITA_ROBOT_IMAGE
 
@@ -175,6 +175,7 @@ Question "Install system dependencies" && {
 
     eval "${UPDATE}"
     eval "${INSTALLER} ca-certificates curl wget gnupg gnupg2"
+    mkdir -p /usr/share/keyrings
 
     [ "X${OS}" = "XAlmaLinux" ] && {
 
@@ -189,6 +190,9 @@ Question "Install system dependencies" && {
             tar xf openjdk-19.0.1_linux-x64_bin.tar.gz
             mv jdk-19.0.1 ${NITAROOT}
             rm -f openjdk-19.0.1_linux-x64_bin.tar.gz
+            JAVA_HOME=${NITAROOT}/jdk-19.0.1
+            PATH=${PATH}:${JAVA_HOME}/bin
+            export JAVA_HOME PATH
 
             tee /etc/profile.d/jdk19.sh <<-EOF1
 export JAVA_HOME=${NITAROOT}/jdk-19.0.1
@@ -201,8 +205,6 @@ EOF1
             echo "${ME}: Cool, you already have keytool installed"
         fi
 
-        java -version
-
     }
 
     [ "X${OS}" = "XUbuntu" ] && {
@@ -211,11 +213,12 @@ EOF1
         eval "${INSTALLER} software-properties-common apt-transport-https"
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
-        eval "${INSTALLER} openjdk-19-jre-headless"
+        eval "${INSTALLER} openjdk-21-jre-headless"
 
     }
 
-    mkdir -p /usr/share/keyrings
+    Verify keytool
+    java -version
 
     eval "${UPDATE}"
 
@@ -399,9 +402,11 @@ Question "Install NITA repositories" && {
     mkdir -p ${NITAPROJECT}
 
     cd  ${K8SROOT}
-    bash apply-k8s.sh
 
-    mkdir -p ${NITAROOT}/nita/k8s/proxy
+    echo "${ME}: Applying NITA namespace"
+    kubectl apply -f nita-namespace.yaml || exit 1
+
+    mkdir -p ${PROXY}
     wget --inet4-only https://raw.githubusercontent.com/${GITHUB_ORG}/nita-webapp/main/nginx/nginx.conf -O ${PROXY}/nginx.conf
     # ln -s ${NITAROOT}/nita/k8s/proxy ${PROXY}/nginx.conf
 
@@ -413,8 +418,8 @@ Question "Install NITA repositories" && {
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ${CERTS}/nginx-certificate-key.key -out ${CERTS}/nginx-certificate.crt
 
     echo "${ME}: Creating config maps for proxy pod"
-    kubectl create cm proxy-config-cm --from-file=${PROXY}/nginx.conf --namespace nita
-    kubectl create cm proxy-cert-cm --from-file=${CERTS}/ --namespace nita
+    kubectl create cm proxy-config-cm --from-file=${PROXY}/nginx.conf --namespace nita --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create cm proxy-cert-cm --from-file=${CERTS}/ --namespace nita --dry-run=client -o yaml | kubectl apply -f -
 
     echo "${ME}: Generating Jenkins keystore."
     Debug "echo In ${JENKINS}"
@@ -429,8 +434,11 @@ Question "Install NITA repositories" && {
     openssl pkcs12 -in ${JENKINS}/jenkins.p12 -nokeys -out ${JENKINS}/jenkins.crt -password pass:${KEYPASS}
 
     echo "${ME}: Creating config maps for Jenkins pod"
-    kubectl create cm jenkins-crt --from-file=${JENKINS}/jenkins.crt --namespace nita
-    kubectl create cm jenkins-keystore --from-file=${JENKINS}/jenkins_keystore.jks --namespace nita
+    kubectl create cm jenkins-crt --from-file=${JENKINS}/jenkins.crt --namespace nita --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create cm jenkins-keystore --from-file=${JENKINS}/jenkins_keystore.jks --namespace nita --dry-run=client -o yaml | kubectl apply -f -
+
+    echo "${ME}: Applying NITA Kubernetes workloads"
+    bash apply-k8s.sh || exit 1
 
     echo "${ME}: Please wait ${bold}5-10 minutes${normal} for the Kubernetes pods to initialise"
 
