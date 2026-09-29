@@ -1,6 +1,6 @@
-# Network Implementation and Test Automation (NITA) 26.5
+# Network Implementation and Test Automation (NITA) 26.10
 
-Welcome to NITA 26.5
+Welcome to NITA 26.10
 
 NITA is an open source platform for automating the building and testing of complex networks.
 
@@ -9,6 +9,13 @@ NITA is an open source platform for automating the building and testing of compl
 This release updates the NITA platform infrastructure to keep pace with
 upstream dependency changes and strengthens reliability through readiness
 probes, an expanded integration test suite, and improved CI diagnostics.
+
+## 26.10
+
+* New an revamped interface added to ``nita-webapp``
+
+For a full list of webapp-level changes in this release, please refer to the
+[NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/main/README.md#2610).
 
 ## 26.5 New Features and Bug Fixes
 
