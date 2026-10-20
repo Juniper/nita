@@ -1,0 +1,749 @@
+{
+  "schema_version": 1,
+  "components": [
+    {
+      "id": "apt-transport-https",
+      "name": "apt-transport-https",
+      "category": "host-prerequisite",
+      "source": "https://packages.ubuntu.com/jammy/apt-transport-https",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "Ubuntu system dependencies",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://packages.ubuntu.com/jammy/apt-transport-https"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "apt-transport-https"
+        }
+      ]
+    },
+    {
+      "id": "ca-certificates",
+      "name": "ca-certificates",
+      "category": "host-prerequisite",
+      "source": "https://packages.ubuntu.com/jammy/ca-certificates",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies; distribution package",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://packages.ubuntu.com/jammy/ca-certificates"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "ca-certificates"
+        }
+      ]
+    },
+    {
+      "id": "calico",
+      "name": "Calico",
+      "category": "host-prerequisite",
+      "source": "https://github.com/projectcalico/calico",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Installer v3.26.0; legacy manifest redirect latest",
+      "conditions": "Cluster initialization uses v3.26.0; legacy redirect file references latest",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://github.com/projectcalico/calico/blob/master/LICENSE.md"
+      ],
+      "references": [
+        {
+          "kind": "resource",
+          "value": "https://docs.tigera.io/calico/latest/manifests/calico.yaml"
+        },
+        {
+          "kind": "resource",
+          "value": "https://raw.githubusercontent.com/projectcalico/calico/v3.26.0/manifests/calico.yaml"
+        }
+      ]
+    },
+    {
+      "id": "containerd.io",
+      "name": "containerd.io",
+      "category": "host-prerequisite",
+      "source": "https://containerd.io/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies; Docker repository package",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://github.com/containerd/containerd/blob/main/LICENSE"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "containerd.io"
+        }
+      ]
+    },
+    {
+      "id": "curl",
+      "name": "curl",
+      "category": "host-prerequisite",
+      "source": "https://curl.se/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies or project builder download fallback",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://curl.se/docs/copyright.html"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "curl"
+        },
+        {
+          "kind": "tool",
+          "value": "curl"
+        }
+      ]
+    },
+    {
+      "id": "docker-ce",
+      "name": "docker-ce",
+      "category": "host-prerequisite",
+      "source": "https://docs.docker.com/engine/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "Standalone Docker installation step",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://github.com/moby/moby/blob/master/LICENSE"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "docker-ce"
+        },
+        {
+          "kind": "resource",
+          "value": "https://download.docker.com/linux/centos/docker-ce.repo"
+        },
+        {
+          "kind": "resource",
+          "value": "https://download.docker.com/linux/ubuntu"
+        },
+        {
+          "kind": "resource",
+          "value": "https://download.docker.com/linux/ubuntu/gpg"
+        }
+      ]
+    },
+    {
+      "id": "git",
+      "name": "git",
+      "category": "host-prerequisite",
+      "source": "https://git-scm.com/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://git-scm.com/about/free-and-open-source"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "git"
+        }
+      ]
+    },
+    {
+      "id": "gnupg",
+      "name": "gnupg",
+      "category": "host-prerequisite",
+      "source": "https://gnupg.org/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies; distribution package name",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://gnupg.org/copying.html"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "gnupg"
+        }
+      ]
+    },
+    {
+      "id": "gnupg2",
+      "name": "gnupg2",
+      "category": "host-prerequisite",
+      "source": "https://gnupg.org/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies; distribution package name",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://gnupg.org/copying.html"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "gnupg2"
+        }
+      ]
+    },
+    {
+      "id": "jq",
+      "name": "jq",
+      "category": "host-prerequisite",
+      "source": "https://jqlang.org/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://github.com/jqlang/jq/blob/master/COPYING"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "jq"
+        }
+      ]
+    },
+    {
+      "id": "junos-mcp-server",
+      "name": "Junos MCP server",
+      "category": "optional-tool",
+      "source": "https://github.com/Juniper/junos-mcp-server",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Image latest",
+      "conditions": "Optional Junos MCP installation",
+      "optional": true,
+      "license": null,
+      "license_sources": [
+        "https://github.com/Juniper/junos-mcp-server/blob/main/LICENSE"
+      ],
+      "references": [
+        {
+          "kind": "image",
+          "value": "ghcr.io/juniper/junos-mcp-server:latest"
+        }
+      ]
+    },
+    {
+      "id": "kubeadm",
+      "name": "kubeadm",
+      "category": "host-prerequisite",
+      "source": "https://kubernetes.io/",
+      "version": null,
+      "version_status": "constraint",
+      "reference": "Kubernetes v1.28 package channel",
+      "conditions": "Kubernetes installation when kubectl is absent",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://github.com/kubernetes/kubernetes/blob/master/LICENSE"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "kubeadm"
+        }
+      ]
+    },
+    {
+      "id": "kubectl",
+      "name": "kubectl",
+      "category": "host-prerequisite",
+      "source": "https://kubernetes.io/",
+      "version": null,
+      "version_status": "constraint",
+      "reference": "Kubernetes v1.28 package channel",
+      "conditions": "Kubernetes installation when kubectl is absent",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://github.com/kubernetes/kubernetes/blob/master/LICENSE"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "kubectl"
+        },
+        {
+          "kind": "resource",
+          "value": "https://pkgs.k8s.io/core:/stable:/v1.28/deb/"
+        },
+        {
+          "kind": "resource",
+          "value": "https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key"
+        },
+        {
+          "kind": "resource",
+          "value": "https://pkgs.k8s.io/core:/stable:/v1.28/rpm/"
+        },
+        {
+          "kind": "resource",
+          "value": "https://pkgs.k8s.io/core:/stable:/v1.28/rpm/repodata/repomd.xml.key"
+        }
+      ]
+    },
+    {
+      "id": "kubelet",
+      "name": "kubelet",
+      "category": "host-prerequisite",
+      "source": "https://kubernetes.io/",
+      "version": null,
+      "version_status": "constraint",
+      "reference": "Kubernetes v1.28 package channel",
+      "conditions": "Kubernetes installation when kubectl is absent",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://github.com/kubernetes/kubernetes/blob/master/LICENSE"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "kubelet"
+        }
+      ]
+    },
+    {
+      "id": "lsb-release",
+      "name": "lsb-release",
+      "category": "host-prerequisite",
+      "source": "https://packages.ubuntu.com/jammy/lsb-release",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "Ubuntu system dependencies",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://packages.ubuntu.com/jammy/lsb-release"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "lsb-release"
+        }
+      ]
+    },
+    {
+      "id": "mariadb",
+      "name": "MariaDB",
+      "category": "component",
+      "source": "https://mariadb.org/",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Image mariadb:10.11; patch version unresolved",
+      "conditions": "Default NITA database",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://mariadb.com/kb/en/mariadb-licenses/"
+      ],
+      "references": [
+        {
+          "kind": "image",
+          "value": "mariadb:10.11"
+        }
+      ]
+    },
+    {
+      "id": "nginx",
+      "name": "nginx",
+      "category": "component",
+      "source": "https://nginx.org/",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Image nginx:stable",
+      "conditions": "Webapp proxy and optional Junos MCP proxy",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://nginx.org/LICENSE"
+      ],
+      "references": [
+        {
+          "kind": "image",
+          "value": "nginx:stable"
+        }
+      ]
+    },
+    {
+      "id": "nita-ansible",
+      "name": "nita-ansible",
+      "category": "component",
+      "source": "https://github.com/Juniper/nita-ansible",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Image latest; repository default branch",
+      "conditions": "Selected by the default NITA stack; image/repository overrides are supported",
+      "optional": false,
+      "license": "Apache-2.0",
+      "license_sources": [
+        "https://github.com/Juniper/nita-ansible/blob/main/LICENSE.txt"
+      ],
+      "references": [
+        {
+          "kind": "image",
+          "value": "ghcr.io/juniper/nita-ansible:latest"
+        },
+        {
+          "kind": "repository",
+          "value": "Juniper/nita-ansible"
+        }
+      ]
+    },
+    {
+      "id": "nita-jenkins",
+      "name": "nita-jenkins",
+      "category": "component",
+      "source": "https://github.com/Juniper/nita-jenkins",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Image latest; repository default branch",
+      "conditions": "Selected by the default NITA stack; image/repository overrides are supported",
+      "optional": false,
+      "license": "Apache-2.0",
+      "license_sources": [
+        "https://github.com/Juniper/nita-jenkins/blob/main/LICENSE.txt"
+      ],
+      "references": [
+        {
+          "kind": "image",
+          "value": "ghcr.io/juniper/nita-jenkins:latest"
+        },
+        {
+          "kind": "repository",
+          "value": "Juniper/nita-jenkins"
+        }
+      ]
+    },
+    {
+      "id": "nita-robot",
+      "name": "nita-robot",
+      "category": "component",
+      "source": "https://github.com/Juniper/nita-robot",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Image latest; repository default branch",
+      "conditions": "Selected by the default NITA stack; image/repository overrides are supported",
+      "optional": false,
+      "license": "Apache-2.0",
+      "license_sources": [
+        "https://github.com/Juniper/nita-robot/blob/main/LICENSE.txt"
+      ],
+      "references": [
+        {
+          "kind": "image",
+          "value": "ghcr.io/juniper/nita-robot:latest"
+        },
+        {
+          "kind": "repository",
+          "value": "Juniper/nita-robot"
+        }
+      ]
+    },
+    {
+      "id": "nita-webapp",
+      "name": "nita-webapp",
+      "category": "component",
+      "source": "https://github.com/Juniper/nita-webapp",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Image latest; repository default branch",
+      "conditions": "Selected by the default NITA stack; image/repository overrides are supported",
+      "optional": false,
+      "license": "Apache-2.0",
+      "license_sources": [
+        "https://github.com/Juniper/nita-webapp/blob/main/LICENSE.txt"
+      ],
+      "references": [
+        {
+          "kind": "image",
+          "value": "ghcr.io/juniper/nita-webapp:latest"
+        },
+        {
+          "kind": "repository",
+          "value": "Juniper/nita-webapp"
+        },
+        {
+          "kind": "resource",
+          "value": "https://raw.githubusercontent.com/Juniper/nita-webapp/main/nginx/nginx.conf"
+        }
+      ]
+    },
+    {
+      "id": "nita-yaml-to-excel",
+      "name": "NITA YAML-to-Excel",
+      "category": "optional-tool",
+      "source": "https://github.com/Juniper/nita-yaml-to-excel",
+      "version": null,
+      "version_status": "mutable",
+      "reference": "Archive of main branch",
+      "conditions": "Optional standalone tools or project builder",
+      "optional": true,
+      "license": null,
+      "license_sources": [
+        "https://github.com/Juniper/nita-yaml-to-excel"
+      ],
+      "references": [
+        {
+          "kind": "resource",
+          "value": "https://github.com/Juniper/nita-yaml-to-excel/archive/refs/heads/main.zip"
+        },
+        {
+          "kind": "tool",
+          "value": "yaml2xls.py"
+        },
+        {
+          "kind": "python-install",
+          "value": "${PIPUNZIPDIR}/nita-yaml-to-excel-main/"
+        },
+        {
+          "kind": "python-install",
+          "value": "./nita-yaml-to-excel-main/ --target /opt/nita-yaml-to-excel"
+        }
+      ]
+    },
+    {
+      "id": "openjdk-21-jre-headless",
+      "name": "openjdk-21-jre-headless",
+      "category": "host-prerequisite",
+      "source": "https://packages.ubuntu.com/jammy/openjdk-21-jre-headless",
+      "version": null,
+      "version_status": "constraint",
+      "reference": "OpenJDK 21 package; patch version unresolved",
+      "conditions": "Ubuntu system dependencies",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://packages.ubuntu.com/jammy/openjdk-21-jre-headless"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "openjdk-21-jre-headless"
+        }
+      ]
+    },
+    {
+      "id": "openjdk-archive",
+      "name": "OpenJDK archive",
+      "category": "host-prerequisite",
+      "source": "https://jdk.java.net/archive/",
+      "version": "19.0.1",
+      "version_status": "exact",
+      "reference": "OpenJDK 19.0.1 archive",
+      "conditions": "AlmaLinux system dependencies, only when keytool is absent",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://openjdk.org/legal/gplv2+ce.html"
+      ],
+      "references": [
+        {
+          "kind": "resource",
+          "value": "https://download.java.net/java/GA/jdk19.0.1/afdd2e245b014143b62ccb916125e3ce/10/GPL/openjdk-19.0.1_linux-x64_bin.tar.gz"
+        }
+      ]
+    },
+    {
+      "id": "python3",
+      "name": "python3",
+      "category": "host-prerequisite",
+      "source": "https://www.python.org/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "Optional YAML-to-Excel installation when Python and pip are absent",
+      "optional": true,
+      "license": null,
+      "license_sources": [
+        "https://docs.python.org/3/license.html"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "python3"
+        }
+      ]
+    },
+    {
+      "id": "python3-pip",
+      "name": "python3-pip",
+      "category": "host-prerequisite",
+      "source": "https://pip.pypa.io/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "Optional YAML-to-Excel installation when pip is absent",
+      "optional": true,
+      "license": null,
+      "license_sources": [
+        "https://github.com/pypa/pip/blob/main/LICENSE.txt"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "python3-pip"
+        }
+      ]
+    },
+    {
+      "id": "pyyaml",
+      "name": "PyYAML",
+      "category": "library",
+      "source": "https://pyyaml.org/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "Generic project builder imports yaml; version provided by its execution environment",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://github.com/yaml/pyyaml/blob/main/LICENSE"
+      ],
+      "references": [
+        {
+          "kind": "python",
+          "value": "yaml"
+        }
+      ]
+    },
+    {
+      "id": "socat",
+      "name": "socat",
+      "category": "host-prerequisite",
+      "source": "https://www.dest-unreach.org/socat/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://www.dest-unreach.org/socat/doc/README"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "socat"
+        }
+      ]
+    },
+    {
+      "id": "software-properties-common",
+      "name": "software-properties-common",
+      "category": "host-prerequisite",
+      "source": "https://packages.ubuntu.com/jammy/software-properties-common",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "Ubuntu system dependencies",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://packages.ubuntu.com/jammy/software-properties-common"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "software-properties-common"
+        }
+      ]
+    },
+    {
+      "id": "unzip",
+      "name": "unzip",
+      "category": "host-prerequisite",
+      "source": "https://infozip.sourceforge.net/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://infozip.sourceforge.net/license.html"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "unzip"
+        }
+      ]
+    },
+    {
+      "id": "wget",
+      "name": "wget",
+      "category": "host-prerequisite",
+      "source": "https://www.gnu.org/software/wget/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "System dependencies or project builder downloader",
+      "optional": false,
+      "license": null,
+      "license_sources": [
+        "https://www.gnu.org/software/wget/"
+      ],
+      "references": [
+        {
+          "kind": "package",
+          "value": "wget"
+        },
+        {
+          "kind": "tool",
+          "value": "wget"
+        }
+      ]
+    },
+    {
+      "id": "zip",
+      "name": "zip",
+      "category": "host-prerequisite",
+      "source": "https://infozip.sourceforge.net/",
+      "version": null,
+      "version_status": "unknown",
+      "reference": "Not pinned by NITA",
+      "conditions": "Project builder prerequisite; not installed by install.sh",
+      "optional": true,
+      "license": null,
+      "license_sources": [
+        "https://infozip.sourceforge.net/license.html"
+      ],
+      "references": [
+        {
+          "kind": "tool",
+          "value": "zip"
+        }
+      ]
+    }
+  ]
+}
