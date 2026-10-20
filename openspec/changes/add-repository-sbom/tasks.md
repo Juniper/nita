@@ -13,4 +13,4 @@
 
 - [x] 3.1 Test coverage drift, metadata integrity, determinism, and release publication failure modes.
 - [x] 3.2 Pass strict OpenSpec validation, schema checks, workflow lint, and existing regression tests.
-- [ ] 3.3 Publish the feature branch and open a draft PR with downloadable example evidence.
+- [x] 3.3 Publish the feature branch and open a draft PR with downloadable example evidence.
