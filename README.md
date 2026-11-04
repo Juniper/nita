@@ -39,6 +39,13 @@ free memory and 20 GB of storage space.
 For a full list of webapp-level changes in this release, please refer to the
 [NITA Webapp README](https://github.com/Juniper/nita-webapp/blob/main/README.md#265-new-features-and-bug-fixes).
 
+# Software Inventory
+
+NITA provides a source-level SBOM and component/license manifest through the
+Software Inventory workflow and new GitHub releases. See the
+[software inventory guide](docs/software-inventory.md) for downloads, local
+generation, maintenance, and coverage limitations.
+
 # Installation
 
 A new ``install.sh`` script is provided with this release, which makes it easy to install everything that you need in one go. It should work for most people in most cases, if you are running either Ubuntu 22.04 LTS or AlmaLinux 9.3 Server. Because the script can install required system dependencies you will need super user access to run it, either as ``root`` or as a user with ``sudo`` privileges. Simply download the raw script file from this GitHub repository, make it executable and then run it like this:

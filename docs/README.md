@@ -9,3 +9,4 @@ The following pages are currently available:
 - [Containers](containers.md). Almost everything you need to know about the containers used by NITA.
 - [Projects](projects.md). What you need to know to create your own projects in NITA.
 - [Nita Examples](nita-examples.md). Overview of existing examples and how to run them in NITA
+- [Software inventory](software-inventory.md). Generate and download the repository SBOM and component/license manifest.

@@ -43,3 +43,7 @@ __pycache__/
 .roo/
 .trae/
 .windsurf/
+
+# Generated source inventory
+dist/inventory/
+.venv-inventory/
