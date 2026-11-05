@@ -14,5 +14,5 @@
 # ********************************************************
         echo -n "    nita-cmd kube renew-certs => "
         echo `cat <<EOT
-Renew Kubernetes certs (kubeadm) and restart kubelet when systemctl is available.
+Renew kubeadm certificates on this host; restart control-plane Pods manually.
 EOT` >&2

@@ -6,6 +6,8 @@
       `kubeadm certs renew all` when available
 - [x] 1.3 Return a clear non-zero error and message when certificate renewal is
       unsupported in the current environment
+- [x] 1.4 Remove the automatic `systemctl restart kubelet`; after successful
+      renewal, print the required manual follow-up guidance
 
 ## 2. Help Script
 
@@ -15,15 +17,21 @@
 ## 3. Documentation
 
 - [x] 3.1 Update `docs/nita-cmd.md` to include `nita-cmd kube renew-certs`
-- [x] 3.2 Document prerequisites and operational caveats (permissions,
-      kubeadm-managed clusters, post-renewal restart expectations)
+- [x] 3.2 Update `docs/nita-cmd.md` to remove the kubelet-restart claim and
+      explain that component restarts are a manual operator step
+- [x] 3.3 Update `docs/certificates.md` to explain local-host scope, execution
+      on every control-plane node in HA clusters, manual static-Pod restart,
+      and external-CA limitations
 
 ## 4. Verification
 
-- [ ] 4.1 Confirm the new command appears in `nita-cmd kube help`
-- [ ] 4.2 Run `nita-cmd kube renew-certs` where `kubeadm` exists and confirm
-      renewal command execution
-- [ ] 4.3 Run `nita-cmd kube renew-certs` where `kubeadm` is absent and confirm
-      expected error behavior and non-zero exit code
-- [ ] 4.4 Run with `_CLI_RUNNER_DEBUG=1` and confirm the underlying command is
+- [x] 4.1 Confirm the new command appears in `nita-cmd kube help`
+- [x] 4.2 Use mocked `kubeadm` and `systemctl` commands to confirm validation
+      invokes renewal without restarting kubelet or performing a real renewal
+- [x] 4.3 Run with `kubeadm` absent and confirm the expected error and non-zero
+      exit status
+- [x] 4.4 Run with `_CLI_RUNNER_DEBUG=1` and confirm the renewal command is
       printed to stderr before execution
+- [x] 4.5 Confirm success output reminds operators to restart control-plane
+      static Pods and repeat on each control-plane node in HA clusters
+- [ ] 4.6 Verify the documented procedure in a disposable kubeadm cluster

@@ -2,7 +2,7 @@
 
 ## Kubernetes Certificates
 
-The [Kubernetes documentation](https://kubernetes.io/docs/setup/best-practices/certificates/) says "If you install Kubernetes with `kubeadm`, the certificates that your cluster requires are automatically generated."  This is the method that we use in the NITA install script (the openssl commands are for nginx and Jenkins) and so by default, the certificates for the Kubernetes cluster will last for one year before they need to be renewed. Fortunately it is a simple process to renew these certificates.
+The [Kubernetes documentation](https://kubernetes.io/docs/setup/best-practices/certificates/) says "If you install Kubernetes with `kubeadm`, the certificates that your cluster requires are automatically generated." This is the method used by the NITA install script (the openssl commands are for nginx and Jenkins). kubeadm-managed leaf certificates have a default validity of one year, configurable in kubeadm settings. kubeadm cannot renew certificates managed by an external CA.
 
 To see when your Kubernetes certificates will expire, run this command:
 
@@ -10,23 +10,32 @@ To see when your Kubernetes certificates will expire, run this command:
 $ sudo kubeadm certs check-expiration
 ```
 
-If they expire soon, or have already expired, you can renew them for another year by running the following commands:
-
-```
-$ sudo kubeadm certs renew all
-$ sudo systemctl restart kubelet
-```
-
-You can also use NITA CLI to run this flow:
+If they expire soon, or have already expired, renew them on each kubeadm control-plane host:
 
 ```
 $ sudo nita-cmd kube renew-certs
 ```
 
-This command uses `kubeadm certs renew all` and then restarts `kubelet` when
-`systemctl` is available.
+In a replicated control plane, run the command on every control-plane node.
+It only renews certificates on the local host. It does not restart kubelet or
+the control-plane static Pods.
 
-:warning: Be aware that the 1-year duration for Kubernetes certificates seems to be hardcoded in the `kubeadm` command, so you will need to remember to renew them on an annual basis.
+After renewal, restart the control-plane Pods so they load the new certificates.
+Kubernetes static Pods are managed by kubelet, so deleting them with kubectl
+does not restart them. On each control-plane node, temporarily move one
+manifest at a time out of `/etc/kubernetes/manifests/`, wait at least 20
+seconds for kubelet to stop that Pod, then move the manifest back and wait for
+the Pod to be recreated before proceeding to the next manifest. Perform this
+maintenance in a controlled window, especially on a single-control-plane
+cluster. See the [kubeadm certificate renewal procedure](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/#manual-certificate-renewal)
+for details.
+
+If you copied `/etc/kubernetes/admin.conf` to `$HOME/.kube/config`, refresh the
+copy after renewal so kubectl uses the renewed client certificate.
+
+:warning: This workflow applies only to certificates managed by kubeadm's local
+CA. Externally managed certificates require renewal through the responsible CA
+and are not handled by `kubeadm certs renew all`.
 
 ## Zscaler, Certificates and K8S
 

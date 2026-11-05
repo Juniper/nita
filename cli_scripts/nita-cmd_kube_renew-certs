@@ -15,11 +15,7 @@
 
 # Priority order is top down
 
-if [ -x "$(command -v kubeadm)" ] && [ -x "$(command -v systemctl)" ]; then
-
-    CMD="kubeadm certs renew all && systemctl restart kubelet"
-
-elif [ -x "$(command -v kubeadm)" ]; then
+if [ -x "$(command -v kubeadm)" ]; then
 
     CMD="kubeadm certs renew all"
 
@@ -32,4 +28,9 @@ fi
 
 [ ${_CLI_RUNNER_DEBUG} ] && echo ${CMD}>&2
 
-eval "${CMD}"
+if eval "${CMD}"; then
+  echo "Certificate renewal completed on this host. Restart the control-plane static Pods using the procedure in docs/certificates.md."
+  echo "Run this command on every control-plane node in a replicated cluster."
+else
+  exit $?
+fi

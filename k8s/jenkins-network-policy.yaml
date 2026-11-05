@@ -20,6 +20,13 @@ spec:
         - podSelector:
             matchLabels:
               io.kompose.service: jenkins
+        - podSelector:
+            matchLabels:
+              io.kompose.service: proxy
     - ports:
         - port: 8443
           protocol: TCP
+      from:
+        - podSelector:
+            matchLabels:
+              io.kompose.service: jenkins
