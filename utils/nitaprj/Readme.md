@@ -68,7 +68,8 @@ The `jtaf-ansible` profile renders generated roles before deploying their XML wi
 `junos_commit_config` role, which assembles text `.cfg` fragments.
 
 Before deployment, the profile inspects the generated IPv4 configuration for the
-management unit (`management_interface.int`, default `em0.0`). If that unit has
+management unit (`management_interface.int`, default `em0.0`; bare names such as
+the enrichment helper's `em0` refer to unit `0`). If that unit has
 an active static address, it retrieves its committed DHCP configuration without
 loading or committing changes. Existing active DHCP is marked for deletion in a
 separate, private copy of the generated XML. The DHCP deletion and static address

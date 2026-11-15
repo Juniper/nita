@@ -59,9 +59,12 @@ def _management_inet(configuration, interface_name, unit_name):
 
 
 def nita_management_addressing(xml, management_interface):
-    if not isinstance(management_interface, str) or "." not in management_interface:
-        raise ValueError("Management interface must include a unit, for example em0.0")
-    interface_name, unit_name = management_interface.rsplit(".", 1)
+    if not isinstance(management_interface, str) or not management_interface:
+        raise ValueError("Management interface must be a name, for example em0 or em0.0")
+    if "." in management_interface:
+        interface_name, unit_name = management_interface.rsplit(".", 1)
+    else:
+        interface_name, unit_name = management_interface, "0"
     if not interface_name or not unit_name.isdecimal():
         raise ValueError("Management interface must include a numeric unit")
     configuration = _configuration(xml, "generated")

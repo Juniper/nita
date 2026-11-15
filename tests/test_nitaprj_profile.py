@@ -53,6 +53,17 @@ class NitaprjProfileTests(unittest.TestCase):
         self.assertIsNotNone(interfaces[0].find("./unit/family/inet6/dhcpv6-client"))
         self.assertEqual(interfaces[1].find("./unit/family/inet/dhcp").attrib, {})
         self.assertNotIn('delete="delete"', generated)
+        metadata = ENRICH.management_interface({
+            "interfaces": {"interface": [{
+                "name": "em0", "unit": [{
+                    "name": "0", "family": {"inet": {"address": [{"name": "192.0.2.5/24"}]}},
+                }],
+            }]},
+        }, "em0")
+        self.assertEqual(
+            MANAGEMENT.nita_reconcile_management_dhcp(generated, current, metadata["int"]),
+            result,
+        )
 
     def test_management_dhcp_reconciliation_is_idempotent_and_unit_specific(self):
         generated = (
