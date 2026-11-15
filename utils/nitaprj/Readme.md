@@ -79,6 +79,20 @@ Ansible Job. Missing or ambiguous addresses stop the launcher. Hostname
 preparation uses this address when `ansible_host` is the inventory name, while
 preserving explicit `ansible_host` overrides.
 
+Enrichment also restores presence flags that workbook conversion turned into
+text. YANG `empty` leaves become boolean `true`; `false` omits the statement.
+Ordinary string fields are unchanged. `generate-role` records empty leaf
+elements observed in the input XML in `configs/empty_leaf_paths.json`, including
+presence flags modeled as strings by the schema. The hint file is included in
+the project archive with `configs`.
+
+For an existing project, copy the updated enrichment helper and record these
+hints using the original XML inputs before the next build:
+
+```sh
+python3 enrich_variables.py . --record-empty-leaves /path/to/device1.xml /path/to/device2.xml
+```
+
 For existing projects, copy `enrich_variables.py` from this utility directory,
 add it to the project manifest, and update `run_build.sh` and
 `make_etc_hosts.yaml` from the profile. A non-default management interface can

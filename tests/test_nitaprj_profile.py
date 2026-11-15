@@ -1,4 +1,6 @@
 import os
+import importlib.util
+import json
 import shutil
 import subprocess
 import tempfile
@@ -13,9 +15,69 @@ ROOT = Path(__file__).resolve().parents[1]
 NITAPRJ_DIR = ROOT / "utils" / "nitaprj"
 NITAPRJ_SCRIPT = NITAPRJ_DIR / "nitaprj.sh"
 JTAF_PROFILE = NITAPRJ_DIR / "profiles" / "jtaf-ansible"
+ENRICH_SPEC = importlib.util.spec_from_file_location(
+    "enrich_variables", NITAPRJ_DIR / "enrich_variables.py"
+)
+ENRICH = importlib.util.module_from_spec(ENRICH_SPEC)
+ENRICH_SPEC.loader.exec_module(ENRICH)
 
 
 class NitaprjProfileTests(unittest.TestCase):
+    def test_presence_restoration_preserves_strings_and_handles_list_flags(self):
+        payload = {"interfaces": {"interface": [{
+            "name": "true", "description": "false",
+            "active": "TRUE", "disabled": "false",
+        }]}}
+        restored = ENRICH.restore_presence_flags(payload, {
+            "interfaces/interface/active", "interfaces/interface/disabled",
+        }, "test")
+        self.assertEqual(restored, {"interfaces": {"interface": [{
+            "name": "true", "description": "false", "active": True,
+        }]}})
+        self.assertEqual(payload["interfaces"]["interface"][0]["active"], "TRUE")
+        with self.assertRaisesRegex(ValueError, "invalid presence flag"):
+            ENRICH.restore_presence_flags({"flag": "not-a-boolean"}, {"flag"}, "test")
+
+    def test_original_xml_records_only_schema_leaf_presence_flags(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "configs").mkdir()
+            schema = {"root": {"children": [{
+                "name": "then", "path": "", "type": "container",
+                "children": [
+                    {"name": "accept", "path": "then", "type": "leaf", "leaf-type": "empty"},
+                    {"name": "add", "path": "then", "type": "leaf", "leaf-type": "string"},
+                    {"name": "description", "path": "then", "type": "leaf", "leaf-type": "string"},
+                ],
+            }]}}
+            (project / "configs/trimmed_schema.json").write_text(json.dumps(schema))
+            xml = project / "source.xml"
+            xml.write_text(
+                "<rpc-reply><configuration><then><accept/><add/>"
+                "<description>true</description><unknown/></then>"
+                "</configuration></rpc-reply>"
+            )
+            ENRICH.record_empty_leaves(project, [xml])
+            hints = json.loads((project / "configs/empty_leaf_paths.json").read_text())
+            self.assertEqual(hints, ["then/accept", "then/add"])
+
+    def test_invalid_presence_flag_does_not_partially_update_project(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            for name in ("configs", "group_vars", "host_vars"):
+                (project / name).mkdir()
+            schema = {"root": {"children": [{
+                "name": "accept", "path": "", "type": "leaf", "leaf-type": "empty",
+            }]}}
+            (project / "configs/trimmed_schema.json").write_text(json.dumps(schema))
+            shared = project / "group_vars/all.yaml"
+            shared.write_text("accept: 'true'\n")
+            host = project / "host_vars/device.yaml"
+            host.write_text("accept: invalid\n")
+            with self.assertRaisesRegex(ValueError, "invalid presence flag"):
+                ENRICH.enrich_variables(project)
+            self.assertEqual(shared.read_text(), "accept: 'true'\n")
+
     def test_hosts_preparation_uses_serialized_container_safe_updates(self):
         hosts = yaml.safe_load((JTAF_PROFILE / "make_etc_hosts.yaml").read_text())
         self.assertFalse(hosts[0]["gather_facts"])
@@ -107,15 +169,20 @@ class NitaprjProfileTests(unittest.TestCase):
                 "mkdir -p ansible-provider-junos-qfx/roles/qfx_role/tasks "
                 "ansible-provider-junos-qfx/filter_plugins\n"
                 "echo '[]' > ansible-provider-junos-qfx/roles/qfx_role/tasks/main.yml\n"
+                "cat > ansible-provider-junos-qfx/trimmed_schema.json <<'JSON'\n"
+                '{"root":{"children":[{"name":"accept","path":"","type":"leaf",'
+                '"leaf-type":"empty"}]}}\nJSON\n'
             )
             converter = tools / "jtaf-xml2yaml"
             converter.write_text("#!/bin/bash\nexit 0\n")
             generator.chmod(0o755)
             converter.chmod(0o755)
+            xml = root / "config.xml"
+            xml.write_text("<configuration><accept/></configuration>")
             env = dict(os.environ, PATH=f"{tools}:{os.environ['PATH']}")
             command = [
                 "bash", str(NITAPRJ_SCRIPT), "generate-role", str(project),
-                "-p", "schema.yang", "-x", "config.xml", "-t", "qfx",
+                "-p", "schema.yang", "-x", str(xml), "-t", "qfx",
             ]
             for _ in range(2):
                 result = subprocess.run(
@@ -128,6 +195,13 @@ class NitaprjProfileTests(unittest.TestCase):
             self.assertNotIn('tmp_dir: "configs"', sites)
             runtime = (project / "build/runtime.yaml").read_text()
             self.assertIn("{{ inventory_hostname }}/xml", runtime)
+            self.assertEqual(
+                json.loads((project / "configs/empty_leaf_paths.json").read_text()),
+                ["accept"],
+            )
+            self.assertIn(
+                "enrich_variables.py", (project / "manifest").read_text().splitlines()
+            )
 
     def test_build_stops_on_render_failure_and_preserves_exit_code(self):
         self._run_build_with_stub(render_status=2, commit_status=0, expected=2)

@@ -346,6 +346,17 @@ action_generate_role() {
             rm -rf "$work_dir"
             exit $xml2yaml_status
         fi
+        if [ -f "${project_dir}/build/runtime.yaml" ]; then
+            cp "$(dirname "$(readlink -f "$0")")/enrich_variables.py" "${project_dir}/enrich_variables.py" || exit 1
+            python3 "${project_dir}/enrich_variables.py" "$project_dir" \
+                --record-empty-leaves "${xml_args[@]}"
+            local record_status=$?
+            if [ $record_status -ne 0 ]; then
+                rm -rf "$work_dir"
+                exit $record_status
+            fi
+            append_line_once "${project_dir}/manifest" "enrich_variables.py"
+        fi
     fi
 
     touch "${project_dir}/manifest" "${project_dir}/build/sites.yaml"
