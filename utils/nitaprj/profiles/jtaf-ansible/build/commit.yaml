@@ -34,11 +34,33 @@
       diff: false
       when: nita_management_addressing.has_static_ipv4
 
+    - name: Inspect generated physical-interface modes
+      ansible.builtin.set_fact:
+        nita_interface_unit_cleanup: "{{ lookup('ansible.builtin.file', junos_conf) | nita_interface_unit_cleanup }}"
+
+    - name: Retrieve existing logical units on aggregate members and tagged ports
+      juniper.device.config:
+        retrieve: committed
+        filter: "{{ nita_interface_unit_cleanup.filter }}"
+        format: xml
+        check: false
+        commit: false
+      register: nita_interface_config
+      when: nita_interface_unit_cleanup.has_targets
+
+    - name: Prepare conflicting empty-unit deletions alongside generated configuration
+      ansible.builtin.copy:
+        content: "{{ lookup('ansible.builtin.file', junos_conf + '.static-management.xml' if nita_management_addressing.has_static_ipv4 else junos_conf) | nita_reconcile_empty_interface_units(nita_interface_config.config) }}"
+        dest: "{{ junos_conf }}.interface-cleanup.xml"
+        mode: "0600"
+      diff: false
+      when: nita_interface_unit_cleanup.has_targets
+
     - name: Merge generated XML and commit
       juniper.device.config:
         load: merge
         format: xml
-        src: "{{ junos_conf + '.static-management.xml' if nita_management_addressing.has_static_ipv4 else junos_conf }}"
+        src: "{{ junos_conf + '.interface-cleanup.xml' if nita_interface_unit_cleanup.has_targets else (junos_conf + '.static-management.xml' if nita_management_addressing.has_static_ipv4 else junos_conf) }}"
         commit: true
         diffs_file: "{{ build_dir }}/log/{{ inventory_hostname }}-diff.log"
         logfile: "{{ log }}"

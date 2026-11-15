@@ -87,6 +87,20 @@ management interface, where the existing explicit DHCP resides, not to the group
 Group contents and `apply-groups` are preserved. Interface-scoped or nested group
 application and inherited DHCP still require separate review.
 
+The deployment also retrieves committed logical units on explicitly named
+physical ports configured as aggregate members or VLAN-tagged interfaces.
+Conflicting empty units (containing only their name) are marked for deletion at
+the top-level interface, without changing the generated configuration group.
+Aggregate members cannot retain active logical units. On tagged ports, only
+units absent from the generated configuration and lacking a VLAN ID are
+considered for cleanup; desired units and existing valid tagged units are kept.
+Non-empty conflicting units stop deployment for manual review rather than being
+deleted. Inactive units, unrelated ports, and ordinary untagged interfaces are
+unchanged. Inherited logical units and interface-scoped group application require
+separate review. Invalid generated aggregation/tagging settings and retrieval
+failures also stop deployment. DHCP and empty-unit deletions are prepared in
+private XML copies and included in the existing single merge/commit transaction.
+
 Existing projects must copy both `build/commit.yaml` and
 `filter_plugins/nita_management.py` from `profiles/jtaf-ansible` before using this
 behavior. Updating the profile alone does not update an uploaded project archive.

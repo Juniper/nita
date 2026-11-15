@@ -1,6 +1,7 @@
-"""Reconcile existing management DHCP with generated static IPv4 addressing."""
+"""Reconcile management DHCP and conflicting empty physical-interface units."""
 
 from ipaddress import IPv4Interface
+import re
 import xml.etree.ElementTree as ET
 
 
@@ -59,7 +60,7 @@ def _management_inet(configuration, interface_name, unit_name):
     return inet
 
 
-def _generated_management_inets(configuration, interface_name, unit_name):
+def _generated_scopes(configuration):
     scopes = [configuration]
     excluded = {
         (element.text or "").strip()
@@ -79,8 +80,12 @@ def _generated_management_inets(configuration, interface_name, unit_name):
         group = _named_child(configuration, "groups", name)
         if _enabled(group):
             scopes.append(group)
+    return scopes
+
+
+def _generated_management_inets(configuration, interface_name, unit_name):
     return [
-        inet for scope in scopes
+        inet for scope in _generated_scopes(configuration)
         if (inet := _management_inet(scope, interface_name, unit_name)) is not None
     ]
 
@@ -164,9 +169,114 @@ def nita_reconcile_management_dhcp(xml, current_xml, management_interface):
     return ET.tostring(generated, encoding="unicode")
 
 
+def _has_vlan_id(unit):
+    vlan_id = _child(unit, "vlan-id")
+    vlan_tags = _child(unit, "vlan-tags")
+    return (
+        _enabled(vlan_id) and bool((vlan_id.text or "").strip())
+        or _enabled(vlan_tags) and bool(len(vlan_tags))
+    )
+
+
+def _physical_unit_targets(configuration):
+    ports = {}
+    for scope in _generated_scopes(configuration):
+        interfaces = _child(scope, "interfaces")
+        if not _enabled(interfaces):
+            continue
+        for interface in interfaces.findall("./{*}interface"):
+            if not _enabled(interface):
+                continue
+            name = interface.findtext("./{*}name", "").strip()
+            aggregate = any(
+                _enabled(options) and _enabled(_child(options, "ieee-802.3ad"))
+                for options in (_child(interface, "ether-options"), _child(interface, "gigether-options"))
+            )
+            tagged = any(_enabled(_child(interface, tag))
+                         for tag in ("vlan-tagging", "flexible-vlan-tagging"))
+            if not re.fullmatch(r"(?:xe|ge|et)-\d+/\d+/\d+(?::\d+)?", name):
+                if name.startswith(("xe-", "ge-", "et-")) and (aggregate or tagged):
+                    raise ValueError(f"Interface cleanup requires an explicit physical port: {name}")
+                continue
+            port = ports.setdefault(name, {
+                "aggregate": False, "tagged": False, "units": set(), "tagged_units": set(),
+            })
+            port["aggregate"] |= aggregate
+            port["tagged"] |= tagged
+            for unit in interface.findall("./{*}unit"):
+                if not _enabled(unit):
+                    continue
+                unit_name = unit.findtext("./{*}name", "").strip()
+                if not unit_name.isdecimal():
+                    raise ValueError(f"Invalid generated logical unit on {name}")
+                port["units"].add(unit_name)
+                if _has_vlan_id(unit):
+                    port["tagged_units"].add(unit_name)
+    targets = {}
+    for name, port in ports.items():
+        if port["aggregate"] and (port["units"] or port["tagged"]):
+            raise ValueError(f"Generated aggregate member {name} must not have logical units or VLAN tagging")
+        if port["tagged"] and port["units"] - port["tagged_units"]:
+            raise ValueError(f"Generated tagged interface {name} has a logical unit without a VLAN ID")
+        if port["aggregate"] or port["tagged"]:
+            targets[name] = port
+    return targets
+
+
+def nita_interface_unit_cleanup(xml):
+    targets = _physical_unit_targets(_configuration(xml, "generated"))
+    query = ET.Element("configuration")
+    interfaces = ET.SubElement(query, "interfaces")
+    for name in targets:
+        interface = ET.SubElement(interfaces, "interface")
+        ET.SubElement(interface, "name").text = name
+        ET.SubElement(interface, "unit")
+    return {"has_targets": bool(targets), "filter": ET.tostring(query, encoding="unicode")}
+
+
+def nita_reconcile_empty_interface_units(xml, current_xml):
+    generated = _configuration(xml, "generated")
+    targets = _physical_unit_targets(generated)
+    if not targets:
+        return xml
+    current = _configuration(current_xml, "retrieved")
+    current_interfaces = _child(current, "interfaces")
+    if not _enabled(current_interfaces):
+        return xml
+    changed = False
+    for name, port in targets.items():
+        current_interface = _named_child(current_interfaces, "interface", name)
+        if not _enabled(current_interface):
+            continue
+        for unit in current_interface.findall("./{*}unit"):
+            if not _enabled(unit):
+                continue
+            unit_name = unit.findtext("./{*}name", "").strip()
+            if not unit_name.isdecimal():
+                raise ValueError(f"Invalid retrieved logical unit on {name}")
+            _named_child(current_interface, "unit", unit_name)
+            if not port["aggregate"] and (unit_name in port["units"] or _has_vlan_id(unit)):
+                continue
+            if unit.attrib or len(unit) != 1 or _child(unit, "name") is None:
+                raise ValueError(f"Refusing to delete non-empty {name} unit {unit_name}; review it manually")
+            interface = _ensure_named_child(_ensure_child(generated, "interfaces"), "interface", name)
+            existing = _named_child(interface, "unit", unit_name)
+            if existing is not None:
+                if "delete" in existing.attrib or existing.get("operation") in ("delete", "remove"):
+                    continue
+                raise ValueError(f"Generated {name} unit {unit_name} conflicts with empty-unit cleanup")
+            namespace = interface.tag.rpartition("}")[0] + "}" if "}" in interface.tag else ""
+            deletion = ET.SubElement(interface, namespace + "unit", {"delete": "delete"})
+            ET.SubElement(deletion, namespace + "name").text = unit_name
+            changed = True
+    return ET.tostring(generated, encoding="unicode") if changed else xml
+
+
 class FilterModule:
     def filters(self):
         return {
             "nita_management_addressing": nita_management_addressing,
             "nita_reconcile_management_dhcp": nita_reconcile_management_dhcp,
+            "nita_interface_unit_cleanup": nita_interface_unit_cleanup,
+            "nita_reconcile_empty_interface_units": nita_reconcile_empty_interface_units,
         }
