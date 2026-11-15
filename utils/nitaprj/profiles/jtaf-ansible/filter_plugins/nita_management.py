@@ -31,7 +31,7 @@ def _named_child(parent, tag, name):
         return None
     children = [
         child for child in parent.findall(f"./{{*}}{tag}")
-        if child.findtext("./{*}name") == name
+        if child.findtext("./{*}name", "").strip() == name
     ]
     if len(children) > 1:
         raise ValueError(f"Ambiguous management configuration: multiple {tag} entries for {name}")
@@ -49,13 +49,57 @@ def _enabled(element):
 
 
 def _management_inet(configuration, interface_name, unit_name):
-    interface = _named_child(_child(configuration, "interfaces"), "interface", interface_name)
+    interfaces = _child(configuration, "interfaces")
+    interface = _named_child(interfaces, "interface", interface_name)
     unit = _named_child(interface, "unit", unit_name)
     family = _child(unit, "family")
     inet = _child(family, "inet")
-    if not all(_enabled(element) for element in (interface, unit, family, inet)):
+    if not all(_enabled(element) for element in (interfaces, interface, unit, family, inet)):
         return None
     return inet
+
+
+def _generated_management_inets(configuration, interface_name, unit_name):
+    scopes = [configuration]
+    excluded = {
+        (element.text or "").strip()
+        for element in configuration.findall("./{*}apply-groups-except")
+        if _enabled(element)
+    }
+    applied = set()
+    for element in configuration.findall("./{*}apply-groups"):
+        if not _enabled(element):
+            continue
+        name = (element.text or "").strip()
+        if not name:
+            raise ValueError("Generated apply-groups must name a configuration group")
+        if name in excluded or name in applied:
+            continue
+        applied.add(name)
+        group = _named_child(configuration, "groups", name)
+        if _enabled(group):
+            scopes.append(group)
+    return [
+        inet for scope in scopes
+        if (inet := _management_inet(scope, interface_name, unit_name)) is not None
+    ]
+
+
+def _ensure_child(parent, name):
+    child = _child(parent, name)
+    if child is None:
+        namespace = parent.tag.rpartition("}")[0] + "}" if "}" in parent.tag else ""
+        child = ET.SubElement(parent, namespace + name)
+    return child
+
+
+def _ensure_named_child(parent, tag, name):
+    child = _named_child(parent, tag, name)
+    if child is None:
+        namespace = parent.tag.rpartition("}")[0] + "}" if "}" in parent.tag else ""
+        child = ET.SubElement(parent, namespace + tag)
+        ET.SubElement(child, namespace + "name").text = name
+    return child
 
 
 def nita_management_addressing(xml, management_interface):
@@ -68,9 +112,9 @@ def nita_management_addressing(xml, management_interface):
     if not interface_name or not unit_name.isdecimal():
         raise ValueError("Management interface must include a numeric unit")
     configuration = _configuration(xml, "generated")
-    inet = _management_inet(configuration, interface_name, unit_name)
+    inets = _generated_management_inets(configuration, interface_name, unit_name)
     addresses = []
-    if inet is not None:
+    for inet in inets:
         for address in inet.findall("./{*}address"):
             if _enabled(address):
                 name = address.findtext("./{*}name")
@@ -78,11 +122,11 @@ def nita_management_addressing(xml, management_interface):
                     addresses.append(str(IPv4Interface(name)))
                 except (ValueError, TypeError) as exc:
                     raise ValueError(f"Invalid static IPv4 address on {management_interface}") from exc
-        if addresses and _enabled(_child(inet, "dhcp")):
-            raise ValueError(
-                f"Generated {management_interface} enables both DHCP and static IPv4; "
-                "remove DHCP from the project variables"
-            )
+    if addresses and any(_enabled(_child(inet, "dhcp")) for inet in inets):
+        raise ValueError(
+            f"Generated {management_interface} enables both DHCP and static IPv4; "
+            "remove DHCP from the project variables"
+        )
 
     query = ET.Element("configuration")
     interface = ET.SubElement(ET.SubElement(query, "interfaces"), "interface")
@@ -110,6 +154,11 @@ def nita_reconcile_management_dhcp(xml, current_xml, management_interface):
     inet = _management_inet(generated, addressing["interface"], addressing["unit"])
     if _child(inet, "dhcp") is not None:
         return xml
+    if inet is None:
+        interfaces = _ensure_child(generated, "interfaces")
+        interface = _ensure_named_child(interfaces, "interface", addressing["interface"])
+        unit = _ensure_named_child(interface, "unit", addressing["unit"])
+        inet = _ensure_child(_ensure_child(unit, "family"), "inet")
     namespace = inet.tag.rpartition("}")[0] + "}" if "}" in inet.tag else ""
     ET.SubElement(inet, namespace + "dhcp", {"delete": "delete"})
     return ET.tostring(generated, encoding="unicode")

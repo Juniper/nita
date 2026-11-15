@@ -69,7 +69,10 @@ The `jtaf-ansible` profile renders generated roles before deploying their XML wi
 
 Before deployment, the profile inspects the generated IPv4 configuration for the
 management unit (`management_interface.int`, default `em0.0`; bare names such as
-the enrichment helper's `em0` refer to unit `0`). If that unit has
+the enrichment helper's `em0` refer to unit `0`). Static addresses are detected
+both directly under `configuration/interfaces` and in active, globally applied
+configuration groups such as the generated `JTAF_ANSIBLE` group. Unapplied,
+inactive, and globally excluded groups are ignored. If that unit has
 an active static address, it retrieves its committed DHCP configuration without
 loading or committing changes. Existing active DHCP is marked for deletion in a
 separate, private copy of the generated XML. The DHCP deletion and static address
@@ -79,6 +82,10 @@ If DHCP is already absent, no deletion is emitted. Invalid XML, ambiguous manage
 entries, conflicting generated DHCP/static settings, and retrieval errors stop
 deployment. Inherited DHCP or unrelated pending candidate changes require separate
 review; this workflow does not alter configuration groups or discard candidates.
+For grouped static addresses, the DHCP deletion is added to the top-level
+management interface, where the existing explicit DHCP resides, not to the group.
+Group contents and `apply-groups` are preserved. Interface-scoped or nested group
+application and inherited DHCP still require separate review.
 
 Existing projects must copy both `build/commit.yaml` and
 `filter_plugins/nita_management.py` from `profiles/jtaf-ansible` before using this

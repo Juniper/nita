@@ -29,6 +29,102 @@ MANAGEMENT_SPEC.loader.exec_module(MANAGEMENT)
 
 
 class NitaprjProfileTests(unittest.TestCase):
+    def test_applied_management_group_deletes_direct_dhcp_without_changing_group(self):
+        generated = (
+            '<configuration xmlns="urn:example:junos"><groups><name> JTAF_ANSIBLE </name>'
+            "<interfaces><interface><name>fxp0</name><unit><name>7</name><family><inet>"
+            "<address><name>192.0.2.5/24</name></address></inet><inet6><dhcpv6-client/>"
+            "</inet6></family></unit></interface></interfaces></groups>"
+            "<apply-groups> JTAF_ANSIBLE </apply-groups></configuration>"
+        )
+        current = (
+            "<configuration><interfaces><interface><name>fxp0</name><unit><name>7</name>"
+            "<family><inet><dhcp/></inet></family></unit></interface></interfaces></configuration>"
+        )
+        summary = MANAGEMENT.nita_management_addressing(generated, "fxp0.7")
+        self.assertTrue(summary["has_static_ipv4"])
+        self.assertEqual(
+            ET.fromstring(summary["filter"]).findtext("./interfaces/interface/unit/name"), "7"
+        )
+        prepared = MANAGEMENT.nita_reconcile_management_dhcp(generated, current, "fxp0.7")
+        root = ET.fromstring(prepared)
+        inet = root.find("./{*}interfaces/{*}interface/{*}unit/{*}family/{*}inet")
+        self.assertEqual(inet.find("{*}dhcp").attrib, {"delete": "delete"})
+        self.assertEqual(root.findtext("./{*}interfaces/{*}interface/{*}name"), "fxp0")
+        self.assertEqual(root.findtext("./{*}interfaces/{*}interface/{*}unit/{*}name"), "7")
+        self.assertIsNone(inet.find("{*}address"))
+        self.assertEqual(
+            ET.tostring(root.find("{*}groups")),
+            ET.tostring(ET.fromstring(generated).find("{*}groups")),
+        )
+        self.assertEqual(root.findtext("{*}apply-groups"), " JTAF_ANSIBLE ")
+        self.assertEqual(
+            MANAGEMENT.nita_reconcile_management_dhcp(prepared, current, "fxp0.7"), prepared
+        )
+        self.assertEqual(
+            MANAGEMENT.nita_reconcile_management_dhcp(generated, "<configuration/>", "fxp0.7"),
+            generated,
+        )
+
+    def test_grouped_management_ignores_unapplied_inactive_and_excluded_groups(self):
+        for attributes, application, address in (
+            ("", "", "<address><name>192.0.2.5/24</name></address>"),
+            (' inactive="inactive"', "<apply-groups>example</apply-groups>",
+             "<address><name>192.0.2.5/24</name></address>"),
+            ("", '<apply-groups inactive="inactive">example</apply-groups>',
+             "<address><name>192.0.2.5/24</name></address>"),
+            ("", "<apply-groups>example</apply-groups><apply-groups-except>example</apply-groups-except>",
+             "<address><name>192.0.2.5/24</name></address>"),
+            ("", "<apply-groups>example</apply-groups>",
+             '<address inactive="inactive"><name>192.0.2.5/24</name></address>'),
+        ):
+            with self.subTest(attributes=attributes, application=application, address=address):
+                generated = (
+                    f"<configuration><groups{attributes}><name>example</name><interfaces>"
+                    f"<interface><name>em0</name><unit><name>0</name><family><inet>{address}"
+                    "</inet></family></unit></interface></interfaces></groups>"
+                    f"{application}</configuration>"
+                )
+                self.assertFalse(
+                    MANAGEMENT.nita_management_addressing(generated, "em0")["has_static_ipv4"]
+                )
+                self.assertEqual(
+                    MANAGEMENT.nita_reconcile_management_dhcp(generated, "<configuration/>", "em0"),
+                    generated,
+                )
+        generated = (
+            "<configuration><groups><name>example</name><interfaces inactive=\"inactive\">"
+            "<interface><name>em0</name><unit><name>0</name><family><inet><address>"
+            "<name>192.0.2.5/24</name></address></inet></family></unit></interface>"
+            "</interfaces></groups><apply-groups>example</apply-groups></configuration>"
+        )
+        self.assertFalse(
+            MANAGEMENT.nita_management_addressing(generated, "em0")["has_static_ipv4"]
+        )
+
+    def test_grouped_management_rejects_invalid_addresses_and_cross_scope_dhcp(self):
+        static = (
+            "<groups><name>static</name><interfaces><interface><name>em0</name>"
+            "<unit><name>0</name><family><inet><address><name>192.0.2.5/24</name></address>"
+            "</inet></family></unit></interface></interfaces></groups><apply-groups>static</apply-groups>"
+        )
+        dhcp = (
+            "<interfaces><interface><name>em0</name><unit><name>0</name><family><inet>"
+            "<dhcp/></inet></family></unit></interface></interfaces>"
+        )
+        for scope in (dhcp, f"<groups><name>dhcp</name>{dhcp}</groups><apply-groups>dhcp</apply-groups>"):
+            with self.subTest(scope=scope), self.assertRaisesRegex(
+                ValueError, "enables both DHCP and static"
+            ):
+                MANAGEMENT.nita_management_addressing(
+                    f"<configuration>{static}{scope}</configuration>", "em0"
+                )
+        with self.assertRaisesRegex(ValueError, "Invalid static IPv4"):
+            MANAGEMENT.nita_management_addressing(
+                f"<configuration>{static}</configuration>".replace("192.0.2.5/24", "invalid"),
+                "em0",
+            )
+
     def test_management_dhcp_deletion_preserves_static_address_and_other_interfaces(self):
         generated = (
             "<configuration><interfaces><interface><name>em0</name><unit><name>0</name>"
