@@ -4,18 +4,42 @@
   gather_facts: no
   vars_files:
     - runtime.yaml
+  module_defaults:
+    juniper.device.config:
+      host: "{{ (ansible_host | default(management_interface.ip | default(inventory_hostname))) | split('/') | first }}"
+      user: "{{ netconf_user | default(omit) }}"
+      passwd: "{{ netconf_passwd | default(omit) }}"
+      port: "{{ netconf_port | default(830) }}"
+      timeout: "{{ netconf_timeout | default(300) }}"
   tasks:
+    - name: Inspect generated management IPv4 addressing
+      ansible.builtin.set_fact:
+        nita_management_addressing: "{{ lookup('ansible.builtin.file', junos_conf) | nita_management_addressing(management_interface.int | default('em0.0')) }}"
+
+    - name: Retrieve existing DHCP on the statically addressed management unit
+      juniper.device.config:
+        retrieve: committed
+        filter: "{{ nita_management_addressing.filter }}"
+        format: xml
+        check: false
+        commit: false
+      register: nita_management_config
+      when: nita_management_addressing.has_static_ipv4
+
+    - name: Prepare management DHCP deletion alongside the generated static address
+      ansible.builtin.copy:
+        content: "{{ lookup('ansible.builtin.file', junos_conf) | nita_reconcile_management_dhcp(nita_management_config.config, management_interface.int | default('em0.0')) }}"
+        dest: "{{ junos_conf }}.static-management.xml"
+        mode: "0600"
+      diff: false
+      when: nita_management_addressing.has_static_ipv4
+
     - name: Merge generated XML and commit
       juniper.device.config:
-        host: "{{ (ansible_host | default(management_interface.ip | default(inventory_hostname))) | split('/') | first }}"
-        user: "{{ netconf_user | default(omit) }}"
-        passwd: "{{ netconf_passwd | default(omit) }}"
-        port: "{{ netconf_port | default(830) }}"
         load: merge
         format: xml
-        src: "{{ junos_conf }}"
+        src: "{{ junos_conf + '.static-management.xml' if nita_management_addressing.has_static_ipv4 else junos_conf }}"
         commit: true
         diffs_file: "{{ build_dir }}/log/{{ inventory_hostname }}-diff.log"
         logfile: "{{ log }}"
         comment: Committed using NITA
-        timeout: "{{ netconf_timeout | default(300) }}"

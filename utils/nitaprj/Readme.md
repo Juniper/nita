@@ -67,6 +67,25 @@ The `jtaf-ansible` profile renders generated roles before deploying their XML wi
 `juniper.device.config` using `load: merge`. It does not use the legacy
 `junos_commit_config` role, which assembles text `.cfg` fragments.
 
+Before deployment, the profile inspects the generated IPv4 configuration for the
+management unit (`management_interface.int`, default `em0.0`). If that unit has
+an active static address, it retrieves its committed DHCP configuration without
+loading or committing changes. Existing active DHCP is marked for deletion in a
+separate, private copy of the generated XML. The DHCP deletion and static address
+are then loaded and committed together; there is no separate DHCP-removal commit.
+Other interfaces, DHCP-only management units, and IPv6 configuration are unchanged.
+If DHCP is already absent, no deletion is emitted. Invalid XML, ambiguous management
+entries, conflicting generated DHCP/static settings, and retrieval errors stop
+deployment. Inherited DHCP or unrelated pending candidate changes require separate
+review; this workflow does not alter configuration groups or discard candidates.
+
+Existing projects must copy both `build/commit.yaml` and
+`filter_plugins/nita_management.py` from `profiles/jtaf-ansible` before using this
+behavior. Updating the profile alone does not update an uploaded project archive.
+The filter is automatically packaged through the existing `filter_plugins`
+manifest entry. Management changes can affect connectivity; validate the intended
+static address and access path before deployment.
+
 Runtime paths live in `build/runtime.yaml`, outside workbook-managed
 `group_vars` and `host_vars`. Generated roles load this file and write separate
 XML files for each device under `/var/tmp/build/<host>/xml`. Do not put runtime

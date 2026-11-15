@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 import uuid
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import yaml
@@ -20,9 +21,109 @@ ENRICH_SPEC = importlib.util.spec_from_file_location(
 )
 ENRICH = importlib.util.module_from_spec(ENRICH_SPEC)
 ENRICH_SPEC.loader.exec_module(ENRICH)
+MANAGEMENT_SPEC = importlib.util.spec_from_file_location(
+    "nita_management", JTAF_PROFILE / "filter_plugins" / "nita_management.py"
+)
+MANAGEMENT = importlib.util.module_from_spec(MANAGEMENT_SPEC)
+MANAGEMENT_SPEC.loader.exec_module(MANAGEMENT)
 
 
 class NitaprjProfileTests(unittest.TestCase):
+    def test_management_dhcp_deletion_preserves_static_address_and_other_interfaces(self):
+        generated = (
+            "<configuration><interfaces><interface><name>em0</name><unit><name>0</name>"
+            "<family><inet><address><name>192.0.2.5/24</name></address></inet>"
+            "<inet6><dhcpv6-client/></inet6></family></unit></interface>"
+            "<interface><name>em1</name><unit><name>0</name><family><inet><dhcp/>"
+            "</inet></family></unit></interface></interfaces></configuration>"
+        )
+        current = (
+            "<rpc-reply><configuration><interfaces><interface><name>em0</name>"
+            "<unit><name>0</name><family><inet><dhcp><client-identifier>"
+            "<user-id>example</user-id></client-identifier></dhcp></inet></family>"
+            "</unit></interface></interfaces></configuration></rpc-reply>"
+        )
+        result = MANAGEMENT.nita_reconcile_management_dhcp(generated, current, "em0.0")
+        root = ET.fromstring(result)
+        interfaces = root.findall("./interfaces/interface")
+        inet = interfaces[0].find("./unit/family/inet")
+        self.assertEqual(inet.findtext("./address/name"), "192.0.2.5/24")
+        self.assertEqual(inet.find("dhcp").attrib, {"delete": "delete"})
+        self.assertEqual(len(inet.find("dhcp")), 0)
+        self.assertIsNotNone(interfaces[0].find("./unit/family/inet6/dhcpv6-client"))
+        self.assertEqual(interfaces[1].find("./unit/family/inet/dhcp").attrib, {})
+        self.assertNotIn('delete="delete"', generated)
+
+    def test_management_dhcp_reconciliation_is_idempotent_and_unit_specific(self):
+        generated = (
+            "<configuration><interfaces><interface><name>fxp0</name><unit><name>7</name>"
+            "<family><inet><address><name>192.0.2.5/24</name></address></inet></family>"
+            "</unit></interface></interfaces></configuration>"
+        )
+        current = (
+            '<configuration xmlns="urn:example:junos"><interfaces><interface>'
+            "<name>fxp0</name><unit><name>0</name><family><inet><dhcp/></inet></family>"
+            "</unit><unit><name>7</name><family><inet><dhcp inactive=\"inactive\"/>"
+            "</inet></family></unit></interface></interfaces></configuration>"
+        )
+        self.assertEqual(
+            MANAGEMENT.nita_reconcile_management_dhcp(generated, current, "fxp0.7"),
+            generated,
+        )
+        current = current.replace(' inactive="inactive"', "")
+        prepared = MANAGEMENT.nita_reconcile_management_dhcp(generated, current, "fxp0.7")
+        self.assertEqual(ET.fromstring(prepared).find("./interfaces/interface/unit/family/inet/dhcp").attrib,
+                         {"delete": "delete"})
+        self.assertEqual(
+            MANAGEMENT.nita_reconcile_management_dhcp(generated, "<configuration/>", "fxp0.7"),
+            generated,
+        )
+
+    def test_management_without_active_static_ipv4_is_unchanged(self):
+        for inet in (
+            "<dhcp/>",
+            '<address inactive="inactive"><name>192.0.2.5/24</name></address>',
+            '<address delete="delete"><name>192.0.2.5/24</name></address>',
+            "",
+        ):
+            generated = (
+                "<configuration><interfaces><interface><name>em0</name><unit><name>0</name>"
+                f"<family><inet>{inet}</inet></family></unit></interface></interfaces>"
+                "</configuration>"
+            )
+            summary = MANAGEMENT.nita_management_addressing(generated, "em0.0")
+            self.assertFalse(summary["has_static_ipv4"])
+            self.assertEqual(
+                MANAGEMENT.nita_reconcile_management_dhcp(generated, "<configuration/>", "em0.0"),
+                generated,
+            )
+
+    def test_management_xml_errors_stop_reconciliation(self):
+        generated = (
+            "<configuration><interfaces><interface><name>em0</name><unit><name>0</name>"
+            "<family><inet><address><name>192.0.2.5/24</name></address></inet></family>"
+            "</unit></interface></interfaces></configuration>"
+        )
+        with self.assertRaisesRegex(ValueError, "enables both DHCP and static"):
+            MANAGEMENT.nita_management_addressing(
+                generated.replace("</inet>", "<dhcp/></inet>"), "em0.0"
+            )
+        with self.assertRaisesRegex(ValueError, "Invalid static IPv4"):
+            MANAGEMENT.nita_management_addressing(generated.replace("192.0.2.5/24", "invalid"), "em0.0")
+        with self.assertRaisesRegex(ValueError, "Invalid retrieved XML"):
+            MANAGEMENT.nita_reconcile_management_dhcp(generated, "<configuration>", "em0.0")
+        with self.assertRaisesRegex(ValueError, "must contain one configuration"):
+            MANAGEMENT.nita_reconcile_management_dhcp(generated, "<rpc-reply/>", "em0.0")
+        with self.assertRaisesRegex(ValueError, "must include a numeric unit"):
+            MANAGEMENT.nita_management_addressing(generated, "em0.invalid")
+        with self.assertRaisesRegex(ValueError, "Ambiguous"):
+            MANAGEMENT.nita_management_addressing(
+                generated.replace(
+                    "</interfaces>", "<interface><name>em0</name></interface></interfaces>"
+                ),
+                "em0.0",
+            )
+
     def test_presence_restoration_preserves_strings_and_handles_list_flags(self):
         payload = {"interfaces": {"interface": [{
             "name": "true", "description": "false",
@@ -92,13 +193,21 @@ class NitaprjProfileTests(unittest.TestCase):
 
     def test_deployment_address_supports_management_ip_and_cidr(self):
         commit = yaml.safe_load((JTAF_PROFILE / "build/commit.yaml").read_text())
-        module = commit[0]["tasks"][0]["juniper.device.config"]
+        defaults = commit[0]["module_defaults"]["juniper.device.config"]
         self.assertEqual(
-            module["host"],
+            defaults["host"],
             "{{ (ansible_host | default(management_interface.ip | "
             "default(inventory_hostname))) | split('/') | first }}",
         )
-        self.assertEqual(module["load"], "merge")
+        tasks = commit[0]["tasks"]
+        retrieval = next(t["juniper.device.config"] for t in tasks
+                         if t.get("juniper.device.config", {}).get("retrieve"))
+        self.assertFalse(retrieval["commit"])
+        self.assertFalse(retrieval["check"])
+        deployment = next(t["juniper.device.config"] for t in tasks
+                          if t.get("juniper.device.config", {}).get("load"))
+        self.assertEqual(deployment["load"], "merge")
+        self.assertIn(".static-management.xml", deployment["src"])
 
     def test_connection_settings_survive_workbook_variable_replacement(self):
         runtime = yaml.safe_load((JTAF_PROFILE / "build/runtime.yaml").read_text())
@@ -137,6 +246,10 @@ class NitaprjProfileTests(unittest.TestCase):
             self.assertIn("shell_command: bash ./run_build.sh", project_yaml)
             self.assertTrue((project_dir / "build/runtime.yaml").is_file())
             self.assertTrue((project_dir / "build/commit.yaml").is_file())
+            self.assertEqual(
+                (project_dir / "filter_plugins/nita_management.py").read_bytes(),
+                (JTAF_PROFILE / "filter_plugins/nita_management.py").read_bytes(),
+            )
             self.assertIn("make_etc_hosts.yaml", manifest.splitlines())
             self.assertIn("enrich_variables.py", manifest.splitlines())
             self.assertEqual(
