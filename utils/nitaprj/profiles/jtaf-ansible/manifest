@@ -5,6 +5,7 @@ build
 build.sh
 configs
 create_ansible_job_k8s.py
+enrich_variables.py
 filter_plugins
 group_vars
 hosts

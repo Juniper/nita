@@ -141,6 +141,9 @@ action_create() {
     echo "Creating project '$project_name' using profile '$profile_name'"
     mkdir $project_name
     cp -r $PROFILE_DIR/${profile_name}/* $project_name
+    if [ "$profile_name" = "jtaf-ansible" ]; then
+        cp "$(dirname "$0")/enrich_variables.py" "$project_name/enrich_variables.py" || exit 1
+    fi
     if [ -f ${project_name}/project.yaml ]; then
         sed -i.bak "s/__PROJECT_NAME__/${project_name}/g" ${project_name}/project.yaml
         rm -f ${project_name}/project.yaml.bak

@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 export NITA_NAMESPACE="${NITA_NAMESPACE:-nita}"
 
 write_yaml_files.py
+python3 ./enrich_variables.py .
 python3 ./create_ansible_job_k8s.py build
 kubectl create -f build.yaml -n "$NITA_NAMESPACE"
 pod=""

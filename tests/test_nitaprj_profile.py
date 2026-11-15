@@ -76,6 +76,11 @@ class NitaprjProfileTests(unittest.TestCase):
             self.assertTrue((project_dir / "build/runtime.yaml").is_file())
             self.assertTrue((project_dir / "build/commit.yaml").is_file())
             self.assertIn("make_etc_hosts.yaml", manifest.splitlines())
+            self.assertIn("enrich_variables.py", manifest.splitlines())
+            self.assertEqual(
+                (project_dir / "enrich_variables.py").read_bytes(),
+                (NITAPRJ_DIR / "enrich_variables.py").read_bytes(),
+            )
             sites = yaml.safe_load((project_dir / "build/sites.yaml").read_text())
             self.assertEqual(sites[0]["import_playbook"], "../make_etc_hosts.yaml")
             self.assertNotIn(
@@ -175,6 +180,9 @@ class NitaprjProfileTests(unittest.TestCase):
         for failed in (False, True):
             with self.subTest(failed=failed), tempfile.TemporaryDirectory() as temp_dir:
                 root = Path(temp_dir)
+                project = root / "project"
+                shutil.copytree(JTAF_PROFILE, project)
+                shutil.copy2(NITAPRJ_DIR / "enrich_variables.py", project)
                 for name, body in {
                     "write_yaml_files.py": "exit 0",
                     "python3": (
@@ -195,9 +203,9 @@ class NitaprjProfileTests(unittest.TestCase):
                     tool.chmod(0o755)
                 calls = root / "calls"
                 result = subprocess.run(
-                    ["bash", str(JTAF_PROFILE / "run_build.sh")], cwd=root,
+                    ["bash", str(project / "run_build.sh")], cwd=root,
                     env=dict(os.environ, PATH=f"{root}:{os.environ['PATH']}",
-                             CALLS=str(calls), PROJECT_DIR=str(JTAF_PROFILE),
+                             CALLS=str(calls), PROJECT_DIR=str(project),
                              NITA_NAMESPACE="test-fabric"),
                     text=True, capture_output=True,
                 )
@@ -210,6 +218,64 @@ class NitaprjProfileTests(unittest.TestCase):
                 ))
                 if failed:
                     self.assertIn("did not complete successfully", result.stderr)
+
+    def test_runner_restores_management_after_workbook_and_stops_on_invalid_addresses(self):
+        for addresses in (["192.0.2.5/24"], [], ["192.0.2.5/24", "192.0.2.6/24"]):
+            with self.subTest(addresses=addresses), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                project = root / "project"
+                shutil.copytree(JTAF_PROFILE, project)
+                shutil.copy2(NITAPRJ_DIR / "enrich_variables.py", project)
+                (project / "group_vars/all.yaml").write_text("{}\n")
+                (project / "host_vars/device.yaml").write_text(
+                    "management_interface:\n  ip: 192.0.2.99\n"
+                )
+                workbook_host = {
+                    "interfaces": {"interface": [{
+                        "name": "em0", "unit": [{
+                            "name": "0", "family": {"inet": {
+                                "address": [{"name": address} for address in addresses]
+                            }}
+                        }]
+                    }]}
+                }
+                tools = root / "bin"
+                tools.mkdir()
+                writer = tools / "write_yaml_files.py"
+                writer.write_text(
+                    "#!/bin/bash\n"
+                    "cat > host_vars/device.yaml <<'YAML'\n"
+                    + yaml.safe_dump(workbook_host)
+                    + "YAML\n"
+                )
+                writer.chmod(0o755)
+                kubectl = tools / "kubectl"
+                calls = root / "calls"
+                kubectl.write_text(
+                    "#!/bin/bash\n"
+                    'echo "$*" >> "$CALLS"\n'
+                    'if [ "$1" = get ]; then echo pod/build-test; fi\n'
+                )
+                kubectl.chmod(0o755)
+                result = subprocess.run(
+                    ["bash", str(project / "run_build.sh")],
+                    cwd=root,
+                    env=dict(os.environ, PATH=f"{tools}:{os.environ['PATH']}",
+                             CALLS=str(calls), NITA_NETCONF_SECRET=""),
+                    text=True, capture_output=True,
+                )
+                if len(addresses) == 1:
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    host = yaml.safe_load((project / "host_vars/device.yaml").read_text())
+                    self.assertEqual(host["management_interface"], {
+                        "int": "em0", "ip": "192.0.2.5", "mask": 24,
+                    })
+                    self.assertTrue(calls.exists())
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("Variable enrichment failed:", result.stderr)
+                    self.assertFalse(calls.exists())
+                    self.assertFalse((project / "build.yaml").exists())
 
     def test_job_generator_passes_build_directory_without_shell_interpolation(self):
         with tempfile.TemporaryDirectory() as temp_dir:

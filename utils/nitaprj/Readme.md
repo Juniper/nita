@@ -72,6 +72,18 @@ Runtime paths live in `build/runtime.yaml`, outside workbook-managed
 XML files for each device under `/var/tmp/build/<host>/xml`. Do not put runtime
 defaults only in `group_vars/all.yaml`: workbook generation replaces that file.
 
+New `jtaf-ansible` projects include `enrich_variables.py` in their archives.
+After each workbook update, `run_build.sh` uses it to restore
+`management_interface` from the IPv4 address on `em0.0` before creating the
+Ansible Job. Missing or ambiguous addresses stop the launcher. Hostname
+preparation uses this address when `ansible_host` is the inventory name, while
+preserving explicit `ansible_host` overrides.
+
+For existing projects, copy `enrich_variables.py` from this utility directory,
+add it to the project manifest, and update `run_build.sh` and
+`make_etc_hosts.yaml` from the profile. A non-default management interface can
+be specified in `variable_metadata.yaml` as supported by the enrichment helper.
+
 The device username (from `ANSIBLE_NET_USERNAME`, falling back to `jcluser`) and
 NETCONF port (`830`) also live in
 `build/runtime.yaml` so workbook updates cannot remove them. Edit that file for

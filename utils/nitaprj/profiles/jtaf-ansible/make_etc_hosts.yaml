@@ -7,6 +7,6 @@
       ansible.builtin.lineinfile:
         path: /etc/hosts
         regexp: '^\S+\s+{{ inventory_hostname | regex_escape }}\s*$'
-        line: "{{ (ansible_host | default(management_interface.ip)) | split('/') | first }} {{ inventory_hostname }}"
+        line: "{{ (management_interface.ip if (ansible_host | default(inventory_hostname)) == inventory_hostname else ansible_host) | split('/') | first }} {{ inventory_hostname }}"
         unsafe_writes: true
       throttle: 1
