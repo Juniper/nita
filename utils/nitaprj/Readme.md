@@ -139,16 +139,18 @@ add it to the project manifest, and update `run_build.sh` and
 `make_etc_hosts.yaml` from the profile. A non-default management interface can
 be specified in `variable_metadata.yaml` as supported by the enrichment helper.
 
-The device username (from `ANSIBLE_NET_USERNAME`, falling back to `jcluser`) and
-NETCONF port (`830`) also live in
+The device username (from `ANSIBLE_NET_USERNAME`, falling back to `jcluser`),
+password (from `ANSIBLE_NET_PASSWORD`, falling back to the default lab password)
+and NETCONF port (`830`) also live in
 `build/runtime.yaml` so workbook updates cannot remove them. Edit that file for
-your environment; these play-level values override inventory values, while
+your environment; these play-level values override inventory values, including
+any `netconf_user` or `netconf_passwd` rows in the workbook, while
 Ansible extra variables can override them per invocation.
-Supply password authentication through `netconf_passwd` or the Juniper module's
-`ANSIBLE_NET_PASSWORD` environment variable, or configure SSH key authentication.
-Optional
-`group_vars/env.yaml` supplies the job's environment; do not package credentials
-in the project archive.
+The packaged password is a lab default and travels in the project archive. For
+any other credentials, supply `ANSIBLE_NET_USERNAME` and `ANSIBLE_NET_PASSWORD`
+through the job's environment (optional `group_vars/env.yaml`, or a Secret as
+described below) instead of editing them into the archive. To use SSH key
+authentication, remove `netconf_passwd` from `build/runtime.yaml`.
 
 For Secret-based authentication, provision a Kubernetes Secret containing keys
 `ANSIBLE_NET_USERNAME` and `ANSIBLE_NET_PASSWORD` in the job's namespace. Then
@@ -165,8 +167,9 @@ every launcher Kubernetes operation. `NITA_NETCONF_SECRET` is optional: when set
 both credential variables use required `secretKeyRef` entries, replacing any
 same-named plaintext entries from `group_vars/env.yaml`. Unrelated environment
 variables remain unchanged. A missing Secret or key prevents the pod from
-starting; there is no plaintext fallback. When unset, existing environment-file
-and SSH-key workflows remain supported. Jenkins environment credentials are
+starting; the `build/runtime.yaml` defaults are not used in that case. When
+unset, the job uses credentials from `group_vars/env.yaml` if present, otherwise
+the `build/runtime.yaml` defaults. Jenkins environment credentials are
 not automatically forwarded to the job. Provision Secret values outside the
 repository; never commit them.
 

@@ -1,5 +1,6 @@
 build_dir: /var/tmp/build
 netconf_user: "{{ lookup('ansible.builtin.env', 'ANSIBLE_NET_USERNAME') | default('jcluser', true) }}"
+netconf_passwd: "{{ lookup('ansible.builtin.env', 'ANSIBLE_NET_PASSWORD') | default('Juniper!1', true) }}"
 netconf_port: 830
 jtaf_vars_root: "{{ playbook_dir }}/.."
 xml_dir: "{{ build_dir }}/{{ inventory_hostname }}/xml"

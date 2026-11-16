@@ -29,6 +29,132 @@ MANAGEMENT_SPEC.loader.exec_module(MANAGEMENT)
 
 
 class NitaprjProfileTests(unittest.TestCase):
+    def test_empty_units_cleanup_for_aggregate_members_preserves_group_and_dhcp(self):
+        generated = (
+            '<configuration xmlns="urn:example:junos"><groups><name> JTAF_ANSIBLE </name>'
+            "<interfaces><interface><name>xe-0/0/2</name><ether-options><ieee-802.3ad>"
+            "<bundle>ae0</bundle></ieee-802.3ad></ether-options></interface></interfaces>"
+            "</groups><apply-groups> JTAF_ANSIBLE </apply-groups><interfaces><interface>"
+            '<name>em0</name><unit><name>0</name><family><inet><dhcp delete="delete"/>'
+            "</inet></family></unit></interface></interfaces></configuration>"
+        )
+        current = (
+            "<configuration><interfaces><interface><name>xe-0/0/2</name><unit><name>0</name>"
+            "</unit></interface></interfaces></configuration>"
+        )
+        summary = MANAGEMENT.nita_interface_unit_cleanup(generated)
+        self.assertTrue(summary["has_targets"])
+        self.assertEqual(
+            ET.fromstring(summary["filter"]).findtext("./interfaces/interface/name"), "xe-0/0/2"
+        )
+        prepared = MANAGEMENT.nita_reconcile_empty_interface_units(generated, current)
+        root = ET.fromstring(prepared)
+        physical = next(node for node in root.findall("./{*}interfaces/{*}interface")
+                        if node.findtext("{*}name") == "xe-0/0/2")
+        self.assertEqual(physical.find("{*}unit").attrib, {"delete": "delete"})
+        self.assertEqual(physical.findtext("./{*}unit/{*}name"), "0")
+        self.assertEqual(
+            root.find("./{*}interfaces/{*}interface/{*}unit/{*}family/{*}inet/{*}dhcp").attrib,
+            {"delete": "delete"},
+        )
+        self.assertEqual(
+            ET.tostring(root.find("{*}groups")),
+            ET.tostring(ET.fromstring(generated).find("{*}groups")),
+        )
+        self.assertEqual(
+            MANAGEMENT.nita_reconcile_empty_interface_units(prepared, current), prepared
+        )
+        self.assertNotIn('<unit delete="delete">', generated)
+
+    def test_empty_units_cleanup_for_tagged_ports_keeps_desired_and_valid_units(self):
+        generated = (
+            "<configuration><groups><name>fabric</name><interfaces><interface><name>xe-0/0/1</name>"
+            "<vlan-tagging/><unit><name>1</name><vlan-id>1</vlan-id><family><inet><address>"
+            "<name>192.0.2.1/24</name></address></inet></family></unit></interface></interfaces>"
+            "</groups><apply-groups>fabric</apply-groups></configuration>"
+        )
+        current = (
+            "<configuration><interfaces><interface><name>xe-0/0/1</name><unit><name>0</name>"
+            "</unit><unit><name>1</name><description>existing</description></unit>"
+            "<unit><name>9</name><vlan-id>9</vlan-id><family><inet/></family></unit>"
+            "</interface><interface><name>xe-0/0/2</name><unit><name>0</name></unit>"
+            "</interface></interfaces></configuration>"
+        )
+        prepared = ET.fromstring(MANAGEMENT.nita_reconcile_empty_interface_units(generated, current))
+        self.assertEqual(
+            [node.findtext("name") for node in prepared.findall("./interfaces/interface/unit")],
+            ["0"],
+        )
+        self.assertEqual(prepared.find("./interfaces/interface/unit").attrib, {"delete": "delete"})
+        self.assertEqual(prepared.findtext("./groups/interfaces/interface/unit/vlan-id"), "1")
+        self.assertIsNone(prepared.find("./interfaces/interface/unit/description"))
+        self.assertEqual(
+            MANAGEMENT.nita_reconcile_empty_interface_units(generated, "<configuration/>"),
+            generated,
+        )
+
+    def test_empty_units_cleanup_refuses_meaningful_unit_configuration(self):
+        for mode in (
+            "<ether-options><ieee-802.3ad><bundle>ae0</bundle></ieee-802.3ad></ether-options>",
+            "<vlan-tagging/><unit><name>1</name><vlan-id>1</vlan-id></unit>",
+        ):
+            generated = (
+                "<configuration><interfaces><interface><name>xe-0/0/2</name>"
+                f"{mode}</interface></interfaces></configuration>"
+            )
+            for content in (
+                "<description>keep me</description>",
+                "<family><inet><address><name>192.0.2.1/24</name></address></inet></family>",
+            ):
+                current = (
+                    "<configuration><interfaces><interface><name>xe-0/0/2</name><unit>"
+                    f"<name>0</name>{content}</unit></interface></interfaces></configuration>"
+                )
+                with self.subTest(mode=mode, content=content), self.assertRaisesRegex(
+                    ValueError, "Refusing to delete non-empty"
+                ):
+                    MANAGEMENT.nita_reconcile_empty_interface_units(generated, current)
+
+    def test_empty_units_cleanup_ignores_unused_modes_and_inactive_units(self):
+        mode = "<ether-options><ieee-802.3ad><bundle>ae0</bundle></ieee-802.3ad></ether-options>"
+        for generated in (
+            f"<configuration><groups><name>unused</name><interfaces><interface>"
+            f"<name>xe-0/0/2</name>{mode}</interface></interfaces></groups></configuration>",
+            f'<configuration><interfaces><interface inactive="inactive"><name>xe-0/0/2</name>'
+            f"{mode}</interface></interfaces></configuration>",
+            "<configuration><interfaces><interface><name>xe-0/0/2</name><unit><name>0</name>"
+            "<family><inet/></family></unit></interface></interfaces></configuration>",
+            "<configuration><interfaces><interface><name>ae0</name><vlan-tagging/>"
+            "<unit><name>1</name><vlan-id>1</vlan-id></unit></interface></interfaces></configuration>",
+        ):
+            self.assertFalse(MANAGEMENT.nita_interface_unit_cleanup(generated)["has_targets"])
+            self.assertEqual(
+                MANAGEMENT.nita_reconcile_empty_interface_units(generated, "<configuration/>"),
+                generated,
+            )
+        generated = (
+            f"<configuration><interfaces><interface><name>xe-0/0/2</name>{mode}"
+            "</interface></interfaces></configuration>"
+        )
+        current = (
+            '<configuration><interfaces><interface><name>xe-0/0/2</name><unit inactive="inactive">'
+            "<name>0</name></unit></interface></interfaces></configuration>"
+        )
+        self.assertEqual(MANAGEMENT.nita_reconcile_empty_interface_units(generated, current), generated)
+
+    def test_empty_units_cleanup_rejects_invalid_generated_modes(self):
+        for mode, message in (
+            ("<ether-options><ieee-802.3ad><bundle>ae0</bundle></ieee-802.3ad></ether-options>"
+             "<unit><name>0</name></unit>", "Generated aggregate member"),
+            ("<vlan-tagging/><unit><name>0</name></unit>", "Generated tagged interface"),
+        ):
+            generated = (
+                "<configuration><interfaces><interface><name>xe-0/0/2</name>"
+                f"{mode}</interface></interfaces></configuration>"
+            )
+            with self.subTest(mode=mode), self.assertRaisesRegex(ValueError, message):
+                MANAGEMENT.nita_interface_unit_cleanup(generated)
+
     def test_applied_management_group_deletes_direct_dhcp_without_changing_group(self):
         generated = (
             '<configuration xmlns="urn:example:junos"><groups><name> JTAF_ANSIBLE </name>'
@@ -323,10 +449,12 @@ class NitaprjProfileTests(unittest.TestCase):
         self.assertIn("ANSIBLE_NET_USERNAME", runtime["netconf_user"])
         self.assertIn("default('jcluser', true)", runtime["netconf_user"])
         self.assertEqual(runtime["netconf_port"], 830)
-        self.assertNotIn("netconf_passwd", runtime)
-        workbook_variables = {"system": {"host_name": "example"}}
+        self.assertIn("ANSIBLE_NET_PASSWORD", runtime["netconf_passwd"])
+        self.assertIn("default('Juniper!1', true)", runtime["netconf_passwd"])
+        workbook_variables = {"system": {"host_name": "example"}, "netconf_passwd": "workbook"}
         effective = {**workbook_variables, **runtime}
         self.assertEqual(effective["netconf_user"], runtime["netconf_user"])
+        self.assertEqual(effective["netconf_passwd"], runtime["netconf_passwd"])
         self.assertEqual(effective["netconf_port"], 830)
 
     def test_jtaf_ansible_create_renders_and_packages_project_yaml(self):
