@@ -1,5 +1,0 @@
-[all:children]
-jtaf_devices
-
-[jtaf_devices]
-# device1 ansible_host=192.0.2.10

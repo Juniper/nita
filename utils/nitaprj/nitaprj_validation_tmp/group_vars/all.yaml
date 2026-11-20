@@ -1,9 +1,0 @@
----
-build_dir: /var/tmp/build
-final_push: 'False'
-junos_conf: '{{ build_dir }}/{{ inventory_hostname }}/junos.conf'
-log: '{{ build_dir }}/ansible-run.log'
-log_dir: '{{ build_dir }}/log'
-netconf_port: 22
-tmp_dir: '{{ build_dir }}/{{ inventory_hostname }}/tmp'
-xml_dir: '{{ build_dir }}/{{ inventory_hostname }}/xml'

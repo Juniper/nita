@@ -43,3 +43,5 @@ __pycache__/
 .roo/
 .trae/
 .windsurf/
+# Generated nitaprj validation output
+utils/nitaprj/nitaprj_validation_tmp/
