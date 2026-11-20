@@ -20,10 +20,10 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Confirm the new command appears in `nita-cmd kube help`
-- [ ] 4.2 Run `nita-cmd kube renew-certs` where `kubeadm` exists and confirm
+- [x] 4.1 Confirm the new command appears in `nita-cmd kube help`
+- [x] 4.2 Run `nita-cmd kube renew-certs` where `kubeadm` exists and confirm
       renewal command execution
-- [ ] 4.3 Run `nita-cmd kube renew-certs` where `kubeadm` is absent and confirm
+- [x] 4.3 Run `nita-cmd kube renew-certs` where `kubeadm` is absent and confirm
       expected error behavior and non-zero exit code
-- [ ] 4.4 Run with `_CLI_RUNNER_DEBUG=1` and confirm the underlying command is
+- [x] 4.4 Run with `_CLI_RUNNER_DEBUG=1` and confirm the underlying command is
       printed to stderr before execution
