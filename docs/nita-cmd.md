@@ -66,8 +66,10 @@ For kubeadm-managed Kubernetes deployments, certificate renewal can be run with:
 $ sudo nita-cmd kube renew-certs
 ```
 
-This command runs ``kubeadm certs renew all`` and restarts ``kubelet`` when
-``systemctl`` is available.
+This command runs ``kubeadm certs renew all`` on the local host. It does not
+restart kubelet or the control-plane static Pods. After a successful renewal,
+follow the restart procedure in `docs/certificates.md`; for a replicated
+control plane, run the command on every control-plane node.
 
 If ``kubeadm`` is not installed, the command exits with an error.
 

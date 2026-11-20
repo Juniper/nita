@@ -81,7 +81,7 @@ CONTAINER ID        IMAGE                         COMMAND                  CREAT
 906f4235bd96        nginx:1.17.9                  "nginx -g 'daemon of…"   4 months ago        Up 47 minutes             80/tcp, 0.0.0.0:443->443/tcp                  nitawebapp_proxy_1
 34743b207365        juniper/nita-webapp:22.8-1    "./build-and-test-we…"   4 months ago        Up 47 minutes             8000/tcp                                      nitawebapp_webapp_1
 cfdc45177801        mariadb:10.4.12               "docker-entrypoint.s…"   4 months ago        Up 47 minutes             3306/tcp                                      nitawebapp_db_1
-922a4eb21e05        juniper/nita-jenkins:22.8-1   "/sbin/tini -- /usr/…"   4 months ago        Up 47 minutes (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
+922a4eb21e05        juniper/nita-jenkins:22.8-1   "/sbin/tini -- /usr/…"   4 months ago        Up 47 minutes (healthy)   8080/tcp, 50000/tcp                    nitajenkins_jenkins_1
 $
 ```
 Here you can see the two persistent NITA containers (Jenkins and the Webapp) plus containers for the Nginx webserver and the Maria SQL database. 
@@ -105,7 +105,7 @@ If you read the nita-cmd documentation you will see that it is in fact just a wr
 $ nita-cmd containers ls
 CONTAINER ID        IMAGE                         CREATED             STATUS                    PORTS                                         NAMES
 34743b207365        juniper/nita-webapp:22.8-1    4 months ago        Up 43 minutes             8000/tcp                                      nitawebapp_webapp_1
-922a4eb21e05        juniper/nita-jenkins:22.8-1   4 months ago        Up 43 minutes (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
+922a4eb21e05        juniper/nita-jenkins:22.8-1   4 months ago        Up 43 minutes (healthy)   8080/tcp, 50000/tcp                    nitajenkins_jenkins_1
 $
 ```
 Here you can see the two persistent containers (Jenkins and Webapp) running. This command shows you some useful information, such as the image name and the container ID (that will be useful later, if you want to access them directly with ``docker``). If you need to find which versions of NITA container you have running, do the following:
@@ -163,7 +163,7 @@ CONTAINER ID        IMAGE                         COMMAND                  CREAT
 906f4235bd96        nginx:1.17.9                  "nginx -g 'daemon of…"   4 months ago        Up 7 hours             80/tcp, 0.0.0.0:443->443/tcp                  nitawebapp_proxy_1
 34743b207365        juniper/nita-webapp:22.8-1    "./build-and-test-we…"   4 months ago        Up 7 hours             8000/tcp                                      nitawebapp_webapp_1
 cfdc45177801        mariadb:10.4.12               "docker-entrypoint.s…"   4 months ago        Up 7 hours             3306/tcp                                      nitawebapp_db_1
-922a4eb21e05        juniper/nita-jenkins:22.8-1   "/sbin/tini -- /usr/…"   4 months ago        Up 7 hours (healthy)   8080/tcp, 50000/tcp, 0.0.0.0:8443->8443/tcp   nitajenkins_jenkins_1
+922a4eb21e05        juniper/nita-jenkins:22.8-1   "/sbin/tini -- /usr/…"   4 months ago        Up 7 hours (healthy)   8080/tcp, 50000/tcp                    nitajenkins_jenkins_1
 $ docker exec -ti cfdc45177801 /bin/bash
 root@cfdc45177801:/#
 ```

@@ -35,7 +35,7 @@ echo "Using Junos MCP image: ${JUNOS_MCP_IMAGE}"
 echo "Using CSRF trusted origins: ${CSRF_TRUSTED_ORIGINS}"
 
 BASE_FILES="nita-namespace.yaml storageClass.yaml pv.yaml pv2.yaml mariadb-persistentvolumeclaim.yaml jenkins-home-persistentvolumeclaim.yaml service-account.yaml cluster-role.yaml role-binding.yaml"
-WORKLOAD_FILES="db-service.yaml db-deployment.yaml webapp-service.yaml webapp-deployment.yaml jenkins-service.yaml jenkins-deployment.yaml proxy-deployment.yaml"
+WORKLOAD_FILES="db-service.yaml db-deployment.yaml webapp-service.yaml webapp-deployment.yaml jenkins-service.yaml jenkins-network-policy.yaml jenkins-deployment.yaml proxy-deployment.yaml"
 REQUIRED_CONFIGMAPS="proxy-config-cm proxy-cert-cm jenkins-crt jenkins-keystore"
 
 ApplyYaml() {

@@ -15,6 +15,9 @@ existing `cli_scripts` model.
   new sub-command.
 - **Modified** `docs/nita-cmd.md`: Documents the new command and expected
   behavior.
+- **Modified** `docs/certificates.md`: Explains the required control-plane
+  Pod restart, per-node execution for replicated control planes, and the
+  limitation for certificates managed by an external CA.
 
 ## Capabilities
 
@@ -28,7 +31,8 @@ existing `cli_scripts` model.
 ## Impact
 
 - CLI scripts: two new scripts in `cli_scripts/`
-- Documentation: one update in `docs/nita-cmd.md`
+- Documentation: updates to `docs/nita-cmd.md` and `docs/certificates.md`
 - Runtime dependency: the command path relies on `kubeadm` availability for
-  direct certificate renewal, and should fail with a clear message when
-  unsupported
+  renewal on the local host. It does not restart control-plane Pods; operators
+  must follow the documented post-renewal procedure. Externally managed
+  certificates are outside the command's scope.

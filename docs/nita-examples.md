@@ -52,7 +52,7 @@ Open a new terminal window in the NITA repo root directory and follow the instru
 *Please note: Ensure to leave the NITA process to completely build the pods prior to attempting to access the portals defined -- this process can take around 20+mins to complete, it has to download the images required and start the pods, once completed you will be able to use the NITA web application and later the Jenkins portals, to check on the progress of this stage use the **nita-cmd kube pods** cli command and observe the pod status.*
 
 **Webapp portal for Nita UI:**\
-At the end of the installation process you will be provided with relevant URLs for NITA (```https://"YOUR-NODE-IP"``` & ```https://"YOUR-NODE-IP":8443```) - Proceed by logging into the NITA webapp UI using the default credentials:
+At the end of the installation process you will be provided with URLs for the NITA webapp (`https://YOUR-NODE-IP/`) and Jenkins (`https://YOUR-NODE-IP/jenkins/`). Proceed by logging into the NITA webapp UI using the default credentials:
 | Username | Password |
 |---|---|
 | ``vagrant`` | ``vagrant123`` |
@@ -143,7 +143,7 @@ Monitoring the NITA Web portal UI build progress is as easy as clicking the "Con
 
 ### Monitor Jenkins Build Process
 
-Another method to monitor the build process is via the Jenkins application web portal, proceed to open the Jenkins IP/Port and you will be presented with the home page, at this point in the example you will observe the new tasks running on the left side of the panel and you can monitor the progress of the tasks running or task which have already been completed, clicking on each of the tasks executed/running  will open a new page/tab and allow you to see further details, in our example we click the task indicator in the left-hand pane and open a new page/tab:
+Another method to monitor the build process is via the Jenkins application web portal at `https://YOUR-NODE-IP/jenkins/`. The home page shows the new tasks running on the left side of the panel. You can monitor tasks in progress or review completed tasks; clicking a task opens a page with further details. In this example, we click the task indicator in the left-hand pane:
 
 ![Jenkins Status 1](images/demo/demo_jenkins_status.png)
 
