@@ -46,13 +46,14 @@ MCP client authentication model, or introduce a load-balancer dependency.
   Do not rewrite Jenkins response bodies.
 - Preserve the webapp session gate described in the existing
   `gate-jenkins-behind-webapp-session` change. Traefik must consult the webapp
-  forward-auth endpoint before forwarding Jenkins requests, redirect denied
-  browser requests to login with a safe return path, replace client-supplied
-  identity headers with the authenticated user and groups, and remove
+  forward-auth endpoint before forwarding Jenkins requests. The webapp
+  companion transforms that endpoint to return a safe login redirect for
+  denied requests and Jenkins-named identity headers for valid sessions.
+  Traefik must relay the redirect, replace client-supplied identity headers
+  with the authenticated user and groups, and remove
   client-supplied `Authorization` before forwarding to Jenkins. Fail closed
   when the auth service fails. Verify this against the actual endpoint and
-  Jenkins security configuration; do not assume the middleware alone
-  implements the redirect and header contract.
+  Jenkins security configuration. There is no Nginx-compatible response mode.
 - Terminate TLS in Traefik with the operator's existing certificate and key
   stored in a Kubernetes TLS Secret. Configure certificate selection so both
   hostname and IP access, including clients without SNI, receive the intended
@@ -125,10 +126,11 @@ MCP client authentication model, or introduce a load-balancer dependency.
    `proxy` Deployment using its existing selector. Wait for readiness and verify
    HTTPS routes and certificate identity. Preserve the old Nginx configuration
    and certificate resources until the cutover has been verified.
-3. If verification fails, reapply the previous proxy Deployment and its
-   configuration, wait for readiness, and verify the old HTTPS route. Document
-   commands and resource prerequisites for both rollback and retry; do not
-   remove old resources automatically before success.
+3. If verification fails, reapply the previous proxy Deployment, its
+   configuration, and the compatible previous webapp image; wait for readiness
+   and verify the old HTTPS route and Jenkins authentication. Document commands
+   and prerequisites for rollback and retry; do not remove old resources
+   automatically before success.
 4. Upgrade the optional MCP sidecar only when MCP is installed. Preserve its
     existing token and backend configuration; verify an actual MCP request,
     rotation and rollback. Do not remove MCP resources for installations that
@@ -141,6 +143,6 @@ MCP client authentication model, or introduce a load-balancer dependency.
 - Which pinned Traefik release and minimal resource set pass the hostname/IP,
   no-SNI, streaming and supported-architecture checks? Resolve and record this
   during implementation before selecting the final manifests.
-- Which Traefik middleware or supported integration implements the complete
-  session-denial login redirect and trusted identity contract? Prove it before
+- Confirm the transformed webapp forward-auth endpoint and Traefik middleware
+  preserve the session-denial redirect and trusted identity contract before
   cutover; do not deploy an unauthenticated Jenkins route as a fallback.

@@ -44,6 +44,8 @@ The existing Jenkins session-gate changes in the webapp and Jenkins repositories
 must be coordinated so that the proxy swap does not weaken authentication.
 The webapp companion change also depends on a separate console-streaming spec
 cleanup to resolve its existing strict-validation length warnings.
+The webapp forward-auth endpoint will change incompatibly for Traefik, so the
+old Nginx proxy and old webapp image must be rolled back together.
 
 Changing Jenkins' listeners or the webapp API is out of scope. This change does
 not add automated certificate issuance, a cluster-wide default ingress
