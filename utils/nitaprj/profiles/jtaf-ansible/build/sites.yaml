@@ -1,0 +1,14 @@
+- import_playbook: ../make_etc_hosts.yaml
+
+- name: Prepare JTAF output directories
+  hosts: all
+  connection: local
+  gather_facts: no
+  vars_files:
+    - runtime.yaml
+  tasks:
+    - name: Create per-device XML output directory
+      ansible.builtin.file:
+        path: "{{ xml_dir }}"
+        state: directory
+        mode: "0755"

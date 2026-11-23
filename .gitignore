@@ -44,6 +44,9 @@ __pycache__/
 .trae/
 .windsurf/
 
+# Generated nitaprj validation output
+utils/nitaprj/nitaprj_validation_tmp/
+
 # Generated source inventory
 dist/inventory/
 .venv-inventory/

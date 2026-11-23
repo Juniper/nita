@@ -1,0 +1,17 @@
+# Files and directories to include in the NITA project archive.
+# Directories are included recursively.
+ansible.cfg
+build
+build.sh
+configs
+create_ansible_job_k8s.py
+enrich_variables.py
+filter_plugins
+group_vars
+hosts
+host_vars
+manifest
+make_etc_hosts.yaml
+project.yaml
+run_build.sh
+roles
