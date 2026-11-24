@@ -1,8 +1,11 @@
+import os
 import re
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -257,6 +260,71 @@ class InstallerRegressionTests(unittest.TestCase):
         self.assertIn("ubuntu-24.04-arm", workflow)
         self.assertIn("github.repository == 'Juniper/nita'", workflow)
         self.assertIn("vars.NITA_ARM_CI_ENABLED == 'true'", workflow)
+
+    def test_kind_ci_loads_source_or_published_webapp_image(self):
+        workflow = yaml.safe_load(NITA_CI.read_text(encoding="utf-8"))
+        steps = workflow["jobs"]["e2e-kind"]["steps"]
+        script = next(
+            step["run"] for step in steps
+            if step.get("name") == "Pull and load container images into Kind"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ("docker", "kind"):
+                executable = Path(directory) / name
+                executable.write_text(f'#!/bin/sh\nprintf "{name} %s\\n" "$*"\n')
+                executable.chmod(0o755)
+            for from_source, image in (
+                ("true", "nita-webapp-verification:local"),
+                ("false", "registry.example/webapp:release"),
+            ):
+                with self.subTest(from_source=from_source):
+                    env = os.environ | {
+                        "PATH": directory + os.pathsep + os.environ["PATH"],
+                        "NITA_WEBAPP_FROM_SOURCE": from_source,
+                        "NITA_WEBAPP_IMAGE": image,
+                        "NITA_JENKINS_IMAGE": "jenkins:test",
+                        "NITA_ANSIBLE_IMAGE": "ansible:test",
+                        "NITA_ROBOT_IMAGE": "robot:test",
+                        "CLUSTER_NAME": "test-cluster",
+                    }
+                    result = subprocess.run(
+                        ["bash", "-e", "-c", script],
+                        env=env, text=True, capture_output=True, check=True,
+                    )
+                    self.assertIn(
+                        f"kind load docker-image {image} --name test-cluster",
+                        result.stdout,
+                    )
+                    self.assertEqual(
+                        f"docker pull {image}" in result.stdout,
+                        from_source == "false",
+                    )
+
+    def test_kind_ci_requires_complete_pinned_companion_source(self):
+        workflow = yaml.safe_load(NITA_CI.read_text(encoding="utf-8"))
+        steps = workflow["jobs"]["e2e-kind"]["steps"]
+        script = next(
+            step["run"] for step in steps
+            if step.get("name") == "Validate companion source selection"
+        )
+        for repository, ref, expected in (
+            ("", "", 0),
+            ("example/nita-webapp", "a" * 40, 0),
+            ("example/nita-webapp", "", 1),
+            ("", "a" * 40, 1),
+            ("example/nita-webapp", "main", 1),
+            ("example/nita-webapp;echo", "a" * 40, 1),
+        ):
+            with self.subTest(repository=repository, ref=ref):
+                result = subprocess.run(
+                    ["bash", "-e", "-c", script],
+                    env=os.environ | {
+                        "WEBAPP_REPOSITORY": repository,
+                        "WEBAPP_REF": ref,
+                    },
+                    text=True, capture_output=True,
+                )
+                self.assertEqual(result.returncode, expected)
 
     def test_junos_mcp_publisher_is_multiarch_and_upstream_only(self):
         workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")

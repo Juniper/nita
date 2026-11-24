@@ -170,6 +170,14 @@ export NITA_JENKINS_IMAGE=ghcr.io/juniper/nita-jenkins@sha256:<digest>
 sudo -E ./install.sh
 ```
 
+For a coordinated CI test before the compatible webapp image is published,
+manually run the NITA CI workflow with `webapp_repository` set to the public
+companion repository (`owner/repo`) and `webapp_ref` set to its full commit
+SHA. CI builds that revision locally and loads the image into Kind; it does not
+publish it. Leave both inputs empty to test the published image selected by the
+`NITA_WEBAPP_IMAGE` repository variable or its default. This source-build
+verification does not replace testing the final published release image.
+
 ## Container Images and Architectures
 
 The component workflows publish official NITA images from the Juniper source
