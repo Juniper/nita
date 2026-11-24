@@ -48,7 +48,7 @@ class InventoryTests(unittest.TestCase):
         props = {p["name"]: p["value"] for p in bom["metadata"]["component"]["properties"]}
         self.assertEqual(props["nita:source-commit"], inventory.git(ROOT, "rev-parse", "HEAD"))
         components = {item["bom-ref"]: item for item in bom["components"]}
-        self.assertNotIn("version", components["nginx"])
+        self.assertEqual(components["traefik"]["version"], "3.7.19")
         self.assertNotIn("licenses", components["docker-ce"])
         self.assertEqual(components["junos-mcp-server"]["scope"], "optional")
         self.assertEqual(components["openjdk-archive"]["version"], "19.0.1")
@@ -105,7 +105,7 @@ class InventoryTests(unittest.TestCase):
 
     def test_real_source_additions_are_detected(self):
         mutations = [
-            ("install.sh", 'eval "${INSTALLER} new-package"\n', "new-package"),
+            ("install.sh", "InstallPackages new-package || exit 1\n", "new-package"),
             ("install.sh", 'wget https://example.org/new-tool.tar.gz\n', "new-tool"),
             ("k8s/new-deployment.yaml", "image: redis:7\n", "redis"),
             ("utils/new_tool.py", "import new_library\n", "new_library"),
@@ -128,11 +128,11 @@ class InventoryTests(unittest.TestCase):
             target = Path(directory)
             self.product_copy(target)
             path = target / "install.sh"
-            path.write_text(path.read_text().replace('eval "${INSTALLER} jq"', 'echo skipped'))
+            path.write_text(path.read_text().replace("InstallPackages jq || exit 1", "echo skipped"))
             with self.assertRaisesRegex(inventory.InventoryError, "Stale.*jq"):
                 inventory.validate_catalog(self.catalog, inventory.discover(target))
             with path.open("a") as stream:
-                stream.write('\neval "${INSTALLER} ${NEW_PACKAGES}"\n')
+                stream.write("\nInstallPackages ${NEW_PACKAGES} || exit 1\n")
             with self.assertRaisesRegex(inventory.InventoryError, "Unresolved package"):
                 inventory.discover(target)
 

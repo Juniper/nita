@@ -66,9 +66,9 @@ MCP client authentication model, or introduce a load-balancer dependency.
   contract without exposing that port on the host. Do not enable response
   buffering or caching for the two SSE routes. Configure upstream and entry
   point timeouts to allow at least 1850 seconds of idle stream time; verify
-  actual behavior rather than assuming equivalent timeout semantics. If a body
-  limit requires buffering middleware, isolate it from streams or prove it
-  does not delay them.
+  actual behavior rather than assuming equivalent timeout semantics. Coordinate
+  with the webapp change's local request-only limiter and identity guard; the
+  limiter must cover all routes without buffering streaming responses.
 - Keep `deployment/proxy` as the CLI restart target. Update installer and
   `apply-k8s.sh` preflight checks to require the new TLS/configuration resources
   and report missing prerequisites. Update Jenkins NetworkPolicy only if
@@ -138,11 +138,11 @@ MCP client authentication model, or introduce a load-balancer dependency.
 5. Upgrade Compose separately using the companion webapp change. Preserve the
     certificate/key and existing configuration for rollback.
 
-## Open Questions
+## Validation
 
-- Which pinned Traefik release and minimal resource set pass the hostname/IP,
-  no-SNI, streaming and supported-architecture checks? Resolve and record this
-  during implementation before selecting the final manifests.
-- Confirm the transformed webapp forward-auth endpoint and Traefik middleware
-  preserve the session-denial redirect and trusted identity contract before
-  cutover; do not deploy an unauthenticated Jenkins route as a fallback.
+Traefik v3.7.19 and the resources in this change passed isolated Kubernetes
+tests for hostname, IP and no-SNI certificates, routing, authentication and
+identity-header spoofing. Full-duration 1850-second SSE and 3600-second MCP
+idle streams passed with the pinned proxy. The amd64 tests and ARM64 proxy
+tests under emulation passed; the gated native ARM64 integration run remains
+outstanding.

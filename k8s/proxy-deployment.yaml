@@ -1,59 +1,62 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: proxy
   namespace: nita
-  annotations:
-    kompose.cmd: kompose convert -f docker-compose.yaml -v
-    kompose.version: 1.22.0 (955b78124)
-  creationTimestamp: null
   labels:
     io.kompose.service: proxy
-  name: proxy
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       io.kompose.service: proxy
-  strategy:
-    type: Recreate
   template:
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -f docker-compose.yaml -v
-        kompose.version: 1.22.0 (955b78124)
-      creationTimestamp: null
       labels:
         io.kompose.network/nita-network: "true"
         io.kompose.service: proxy
     spec:
+      serviceAccountName: nita-traefik
       containers:
-        - image: nginx:stable
-          name: proxy
+        - name: proxy
+          image: traefik:v3.7.19
+          workingDir: /
           ports:
             - containerPort: 443
               hostPort: 443
               protocol: TCP
-          resources: {}
+            - containerPort: 8000
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              port: 8082
+              path: /ping
+            periodSeconds: 2
           volumeMounts:
-            - name: proxy-conf
-              mountPath: /etc/nginx/
-            - name: proxy-cert
-              mountPath: /etc/certificate/
-            - name: tmpfs-1
-              mountPath: /var/run
-            - name: tmpfs-2
-              mountPath: /var/cache/nginx
+            - name: config
+              mountPath: /etc/traefik
+              readOnly: true
+            - name: bodylimit
+              mountPath: /plugins-local/src/github.com/Juniper/nita-webapp/traefik/bodylimit
+              readOnly: true
+            - name: identityguard
+              mountPath: /plugins-local/src/github.com/Juniper/nita-webapp/traefik/identityguard
+              readOnly: true
+            - name: certificate
+              mountPath: /etc/certificate
+              readOnly: true
       volumes:
-        - name: proxy-conf
+        - name: config
           configMap:
-            name: proxy-config-cm
-            defaultMode: 0777
-        - name: proxy-cert
+            name: nita-traefik-config
+        - name: bodylimit
           configMap:
-            name: proxy-cert-cm
-            defaultMode: 0777
-        - name: tmpfs-1
-          emptyDir: {}
-        - name: tmpfs-2
-          emptyDir: {}
-      restartPolicy: Always
+            name: nita-traefik-bodylimit
+        - name: identityguard
+          configMap:
+            name: nita-traefik-identityguard
+        - name: certificate
+          secret:
+            secretName: nita-traefik-tls

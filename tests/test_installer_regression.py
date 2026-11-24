@@ -1,4 +1,6 @@
 import re
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -34,6 +36,74 @@ class InstallerRegressionTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def installer_function(self, name):
+        match = re.search(
+            rf"^{name}\(\) \{{\n.*?^\}}",
+            self.install_text,
+            re.MULTILINE | re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        return match.group()
+
+    def test_package_commands_preserve_arguments_and_fail_on_unknown_os(self):
+        functions = "\n".join(
+            self.installer_function(name)
+            for name in ("InstallPackages", "UpdatePackages")
+        )
+        for os_name, manager in (("AlmaLinux", "dnf"), ("Ubuntu", "apt")):
+            with self.subTest(os=os_name):
+                result = subprocess.run(
+                    [
+                        "bash", "-c",
+                        functions + '\n'
+                        'dnf() { printf "dnf <%s>\\n" "$@"; }\n'
+                        'apt() { printf "apt <%s>\\n" "$@"; }\n'
+                        'OS="$1"; InstallPackages "one package" '
+                        '"literal;not-a-command" || exit; UpdatePackages',
+                        "test", os_name,
+                    ],
+                    text=True, capture_output=True, check=True,
+                )
+                self.assertEqual(
+                    result.stdout.splitlines(),
+                    [f"{manager} <{arg}>" for arg in (
+                        "install", "-y", "one package", "literal;not-a-command",
+                        "update", "-y",
+                    )],
+                )
+        result = subprocess.run(
+            ["bash", "-c", functions + '\nOS=Other; ME=test; InstallPackages pkg'],
+            text=True, capture_output=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Unsupported package manager", result.stderr)
+        result = subprocess.run(
+            [
+                "bash", "-c",
+                functions + '\ndnf() { return 37; }; OS=AlmaLinux; InstallPackages pkg',
+            ],
+            text=True, capture_output=True,
+        )
+        self.assertEqual(result.returncode, 37)
+
+    def test_debug_does_not_execute_expanded_arguments_or_log_keypass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            marker = Path(directory) / "injected"
+            argument = f"$(touch {marker})"
+            result = subprocess.run(
+                [
+                    "bash", "-c",
+                    self.installer_function("Debug")
+                    + '\nDEBUG=1; ME=test; Debug echo "$1"',
+                    "test", argument,
+                ],
+                text=True, capture_output=True, check=True,
+            )
+            self.assertIn(argument, result.stderr)
+            self.assertFalse(marker.exists())
+        self.assertNotRegex(self.install_text, r"(?m)^\s*Debug .*\$KEYPASS")
+        self.assertNotRegex(self.install_text, r"(?m)^\s*eval(?:\s|$)")
+
     def test_ubuntu_installs_supported_openjdk_package(self):
         self.assertIn("openjdk-21-jre-headless", self.install_text)
         self.assertNotIn("openjdk-19-jre-headless", self.install_text)
@@ -46,12 +116,8 @@ class InstallerRegressionTests(unittest.TestCase):
 
     def test_core_configmaps_are_created_before_core_apply(self):
         apply_pos = self.install_text.index("bash apply-k8s.sh")
-        for name in (
-            "proxy-config-cm",
-            "proxy-cert-cm",
-            "jenkins-crt",
-            "jenkins-keystore",
-        ):
+        self.assertLess(self.install_text.index("prepare-traefik.sh"), apply_pos)
+        for name in ("jenkins-crt", "jenkins-keystore"):
             create_pos = self.install_text.index(f"kubectl create cm {name}")
             self.assertLess(
                 create_pos,
@@ -76,13 +142,15 @@ class InstallerRegressionTests(unittest.TestCase):
 
     def test_core_apply_preflights_required_configmaps(self):
         for name in (
-            "proxy-config-cm",
-            "proxy-cert-cm",
+            "nita-traefik-config",
+            "nita-traefik-bodylimit",
+            "nita-traefik-identityguard",
             "jenkins-crt",
             "jenkins-keystore",
         ):
             self.assertIn(name, self.apply_text)
         self.assertRegex(self.apply_text, r"kubectl get cm .*\$\{cm\}")
+        self.assertIn("kubectl get secret nita-traefik-tls", self.apply_text)
 
     def test_public_ghcr_and_juniper_are_the_defaults(self):
         for script_text in (self.install_text, self.apply_text):

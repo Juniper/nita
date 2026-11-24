@@ -7,6 +7,8 @@
 # ------------------------------------------------------------------------------
 # Define functions and variables
 
+set -o pipefail
+
 ME="${0##*/}"                           # This scripts name
 HOST=`uname -n`
 REALUSER="${SUDO_USER:-${USER}}"        # User behind sudo
@@ -36,10 +38,12 @@ JENKINS=${JENKINS:=/var/jenkins_home}
 JUNOS_MCP_DEVICES=${JUNOS_MCP_DEVICES:=$NITAROOT/nita/examples/mcp/devices.json}
 JUNOS_MCP_TOKEN_ID=${JUNOS_MCP_TOKEN_ID:=nita-lab}
 JUNOS_MCP_TOKEN_VALUE=${JUNOS_MCP_TOKEN_VALUE:=}
+JUNOS_MCP_ROTATE=${JUNOS_MCP_ROTATE:=false}
 KEYPASS=${KEYPASS:="nita123"}
 
 CONTAINER_REGISTRY=${CONTAINER_REGISTRY:=ghcr.io/juniper}
 GITHUB_ORG=${GITHUB_ORG:=Juniper}
+NITA_GIT_REF=${NITA_GIT_REF:=main}
 NITA_WEBAPP_IMAGE=${NITA_WEBAPP_IMAGE:=${CONTAINER_REGISTRY}/nita-webapp:latest}
 NITA_JENKINS_IMAGE=${NITA_JENKINS_IMAGE:=${CONTAINER_REGISTRY}/nita-jenkins:latest}
 NITA_ANSIBLE_IMAGE=${NITA_ANSIBLE_IMAGE:=${CONTAINER_REGISTRY}/nita-ansible:latest}
@@ -51,7 +55,7 @@ KUBECONFIG=${KUBECONFIG:=$KUBEROOT/admin.conf}
 
 [ -n "${JAVA_HOME}" ] && PATH=${PATH}:${JAVA_HOME}/bin
 export OWNER_HOME=`egrep "^${REALUSER}" /etc/passwd | awk -F: '{print $6}'`
-export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_IMAGE JUNOS_MCP_TOKEN_ID JUNOS_MCP_TOKEN_VALUE KEYPASS KUBECONFIG JAVA_HOME CONTAINER_REGISTRY GITHUB_ORG NITA_WEBAPP_IMAGE NITA_JENKINS_IMAGE NITA_ANSIBLE_IMAGE NITA_ROBOT_IMAGE
+export PATH NITAROOT KUBEROOT K8SROOT PROXY CERTS JENKINS JUNOS_MCP_DEVICES JUNOS_MCP_IMAGE JUNOS_MCP_TOKEN_ID JUNOS_MCP_TOKEN_VALUE JUNOS_MCP_ROTATE KEYPASS KUBECONFIG JAVA_HOME CONTAINER_REGISTRY GITHUB_ORG NITA_WEBAPP_IMAGE NITA_JENKINS_IMAGE NITA_ANSIBLE_IMAGE NITA_ROBOT_IMAGE
 
 # Aliases used by the standalone Docker container steps
 ANSIBLE_IMAGE="${NITA_ANSIBLE_IMAGE}"
@@ -89,21 +93,33 @@ Verify() {
 
     else
 
-        Debug "echo $1 exists"
+        Debug echo "$1" exists
     fi
 
 }
 
 Debug() {
 
-    # Execute debug commands if DEBUG is set in the shell
-
-    [ ${DEBUG} ] && {
+    if [ -n "${DEBUG:-}" ]; then
         echo "${ME}: DEBUG: $*" >&2
-        eval "$*" >&2
-    }
+        "$@" >&2
+    fi
+}
 
-    return $?
+InstallPackages() {
+    case "${OS}" in
+        AlmaLinux) dnf install -y "$@" ;;
+        Ubuntu) apt install -y "$@" ;;
+        *) echo "${ME}: Unsupported package manager for OS \"${OS}\"." >&2; return 1 ;;
+    esac
+}
+
+UpdatePackages() {
+    case "${OS}" in
+        AlmaLinux) dnf update -y ;;
+        Ubuntu) apt update -y ;;
+        *) echo "${ME}: Unsupported package manager for OS \"${OS}\"." >&2; return 1 ;;
+    esac
 }
 
 # ------------------------------------------------------------------------------
@@ -119,30 +135,22 @@ echo "${ME}: NITA install script."
     exit 1
 }
 
-Debug "echo $PATH"
-Debug "echo $NITAROOT $KUBEROOT $K8SROOT $PROXY $CERTS $JENKINS $KEYPASS $KUBECONFIG $JAVA_HOME"
+Debug echo "$PATH"
+Debug echo "$NITAROOT" "$KUBEROOT" "$K8SROOT" "$PROXY" "$CERTS" "$JENKINS" "$KUBECONFIG" "$JAVA_HOME"
 
 ARCH=`uname -m`
 MEM=`free -g | grep Mem | awk '{print $2}'`
 DISK=`df --block-size=G --output='avail' /var | sed 1d | sed 's/.$//'`
 OS=`hostnamectl | grep "Operating System" | awk '{print $3}'`
 
-Debug "echo The OS is ${OS}"
-Debug "echo The CPU architecture is ${ARCH}"
-Debug "echo Free memory is ${MEM}GB"
-Debug "echo Free disk space is ${DISK}GB"
+Debug echo "The OS is ${OS}"
+Debug echo "The CPU architecture is ${ARCH}"
+Debug echo "Free memory is ${MEM}GB"
+Debug echo "Free disk space is ${DISK}GB"
 
 case "${OS}" in
 
-    AlmaLinux)
-        INSTALLER="dnf install -y"
-        UPDATE="dnf update -y"
-        ;;
-
-    Ubuntu)
-        INSTALLER="apt install -y"
-        UPDATE="apt update -y"
-        ;;
+    AlmaLinux|Ubuntu) ;;
 
     *)
         echo "Warning: OS \"${OS}\" is untested."
@@ -172,8 +180,8 @@ Question "Install system dependencies" && {
 
     # Update system packages and install our dependencies
 
-    eval "${UPDATE}"
-    eval "${INSTALLER} ca-certificates curl wget gnupg gnupg2"
+    UpdatePackages || exit 1
+    InstallPackages ca-certificates curl wget gnupg gnupg2 || exit 1
     mkdir -p /usr/share/keyrings
 
     [ "X${OS}" = "XAlmaLinux" ] && {
@@ -208,24 +216,24 @@ EOF1
 
     [ "X${OS}" = "XUbuntu" ] && {
 
-        eval "${INSTALLER} lsb-release"
-        eval "${INSTALLER} software-properties-common apt-transport-https"
+        InstallPackages lsb-release || exit 1
+        InstallPackages software-properties-common apt-transport-https || exit 1
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list
-        eval "${INSTALLER} openjdk-21-jre-headless"
+        InstallPackages openjdk-21-jre-headless || exit 1
 
     }
 
     Verify keytool
     java -version
 
-    eval "${UPDATE}"
+    UpdatePackages || exit 1
 
-    eval "${INSTALLER} containerd.io"
-    eval "${INSTALLER} git"
-    eval "${INSTALLER} socat"
-    eval "${INSTALLER} jq"
-    eval "${INSTALLER} unzip"
+    InstallPackages containerd.io || exit 1
+    InstallPackages git || exit 1
+    InstallPackages socat || exit 1
+    InstallPackages jq || exit 1
+    InstallPackages unzip || exit 1
 
     mkdir -p /etc/containerd/
 
@@ -288,7 +296,7 @@ gpgcheck=1
 gpgkey=https://pkgs.k8s.io/core:/stable:/v1.28/rpm/repodata/repomd.xml.key
 exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
 EOF2
-            eval "${INSTALLER} kubelet kubeadm kubectl --disableexcludes=kubernetes"
+            InstallPackages kubelet kubeadm kubectl --disableexcludes=kubernetes || exit 1
 
         }
 
@@ -296,8 +304,8 @@ EOF2
             curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
             echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
 
-            eval "${UPDATE}"
-            eval "${INSTALLER} kubelet kubeadm kubectl"
+            UpdatePackages || exit 1
+            InstallPackages kubelet kubeadm kubectl || exit 1
 
             apt-mark hold kubelet kubeadm kubectl
         }
@@ -322,9 +330,9 @@ Question "Initialise Kubernetes cluster" && {
 
     # Some status information on the cluster
 
-    Debug "kubectl cluster-info"
-    Debug "kubectl version --client"
-    Debug "kubectl get ns"
+    Debug kubectl cluster-info
+    Debug kubectl version --client
+    Debug kubectl get ns
 
     systemctl enable kubelet.service
 
@@ -335,7 +343,7 @@ Question "Initialise Kubernetes cluster" && {
         # Alma will probably have the firewall enabled
 
         FIREWALL_STATE=`firewall-cmd --state`
-        Debug "echo Firewall state is ${FIREWALL_STATE}"
+        Debug echo "Firewall state is ${FIREWALL_STATE}"
 
         [ "X${FIREWALL_STATE}" == "Xrunning" ] && {
             firewall-cmd --permanent --add-port=6443/tcp
@@ -346,7 +354,7 @@ Question "Initialise Kubernetes cluster" && {
     }
 
     [ "X${OS}" = "XUbuntu" ] && {
-        Debug "ufw status"
+        Debug ufw status
     }
 
     kubectl taint nodes --all node-role.kubernetes.io/master-
@@ -372,7 +380,11 @@ Question "Install NITA repositories" && {
 
             echo "${ME}: Cloning fresh repository: ${REPO}"
 
-            git clone https://github.com/${GITHUB_ORG}/${REPO}.git ${NITAROOT}/${REPO}
+            if [ "${REPO}" = nita ]; then
+                git clone --branch "${NITA_GIT_REF}" "https://github.com/${GITHUB_ORG}/${REPO}.git" "${NITAROOT}/${REPO}" || exit 1
+            else
+                git clone "https://github.com/${GITHUB_ORG}/${REPO}.git" "${NITAROOT}/${REPO}" || exit 1
+            fi
 
             # Make symbolic links for nita cli scripts...
 
@@ -405,32 +417,25 @@ Question "Install NITA repositories" && {
     echo "${ME}: Applying NITA namespace"
     kubectl apply -f nita-namespace.yaml || exit 1
 
-    mkdir -p ${PROXY}
-    wget --inet4-only https://raw.githubusercontent.com/${GITHUB_ORG}/nita-webapp/main/nginx/nginx.conf -O ${PROXY}/nginx.conf
-    # ln -s ${NITAROOT}/nita/k8s/proxy ${PROXY}/nginx.conf
+    Debug kubectl get nodes -o wide
+    Debug kubectl get pods -n nita
 
-    Debug "kubectl get nodes -o wide"
-    Debug "kubectl get pods -n nita"
-
-    echo "${ME}: Generating nginx certificates."
-    mkdir -p ${CERTS}
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ${CERTS}/nginx-certificate-key.key -out ${CERTS}/nginx-certificate.crt
-
-    echo "${ME}: Creating config maps for proxy pod"
-    kubectl create cm proxy-config-cm --from-file=${PROXY}/nginx.conf --namespace nita --dry-run=client -o yaml | kubectl apply -f -
-    kubectl create cm proxy-cert-cm --from-file=${CERTS}/ --namespace nita --dry-run=client -o yaml | kubectl apply -f -
+    echo "${ME}: Preparing Traefik configuration and proxy certificate."
+    bash "${K8SROOT}/prepare-traefik.sh" || exit 1
 
     echo "${ME}: Generating Jenkins keystore."
-    Debug "echo In ${JENKINS}"
+    Debug echo "In ${JENKINS}"
     # Note that keys and certs must be stored in the same directory as is referenced in the YAML configs
     mkdir -p ${JENKINS}
     Verify keytool
-    keytool -genkey -keyalg RSA -alias selfsigned -keystore ${JENKINS}/jenkins_keystore.jks -keypass ${KEYPASS} -keysize 4096 -dname "cn=jenkins, ou=, o=, l=, st=, c=" -storepass ${KEYPASS} -srckeypass ${KEYPASS}
+    if [ ! -f "${JENKINS}/jenkins_keystore.jks" ]; then
+        keytool -genkey -keyalg RSA -alias selfsigned -keystore "${JENKINS}/jenkins_keystore.jks" -keypass "${KEYPASS}" -keysize 4096 -dname "cn=jenkins, ou=, o=, l=, st=, c=" -storepass "${KEYPASS}" -srckeypass "${KEYPASS}" || exit 1
+    fi
 
-    keytool -importkeystore -srckeystore ${JENKINS}/jenkins_keystore.jks -destkeystore ${JENKINS}/jenkins.p12 -deststoretype PKCS12 -deststorepass ${KEYPASS}  -srcstorepass ${KEYPASS}
+    keytool -importkeystore -noprompt -srckeystore "${JENKINS}/jenkins_keystore.jks" -destkeystore "${JENKINS}/jenkins.p12" -deststoretype PKCS12 -deststorepass "${KEYPASS}" -srcstorepass "${KEYPASS}" || exit 1
 
     echo "${ME}: Converting Jenkins keystore to certificate"
-    openssl pkcs12 -in ${JENKINS}/jenkins.p12 -nokeys -out ${JENKINS}/jenkins.crt -password pass:${KEYPASS}
+    openssl pkcs12 -in "${JENKINS}/jenkins.p12" -nokeys -out "${JENKINS}/jenkins.crt" -password "pass:${KEYPASS}" || exit 1
 
     echo "${ME}: Creating config maps for Jenkins pod"
     kubectl create cm jenkins-crt --from-file=${JENKINS}/jenkins.crt --namespace nita --dry-run=client -o yaml | kubectl apply -f -
@@ -441,9 +446,9 @@ Question "Install NITA repositories" && {
 
     echo "${ME}: Please wait ${bold}5-10 minutes${normal} for the Kubernetes pods to initialise"
 
-    Debug "kubectl get cm"
-    Debug "kubectl describe cm"
-    Debug "kubectl get ns nita"
+    Debug kubectl get cm
+    Debug kubectl describe cm
+    Debug kubectl get ns nita
 
     # Finally, copy the K8S admin file to the local user and set ownership and update bashrc
 
@@ -482,66 +487,24 @@ Question "Install Junos MCP server pod on port 8090" && {
     done
 
     if [ ! -f "${JUNOS_MCP_DEVICES}" ]; then
-        echo "${ME}: Error: Cannot find default devices mapping file: ${JUNOS_MCP_DEVICES}"
-        echo "${ME}: Skipping Junos MCP server install."
+        echo "${ME}: Error: Cannot find default devices mapping file: ${JUNOS_MCP_DEVICES}" >&2
+        exit 1
     else
 
+        echo "${ME}: Preparing Junos MCP Traefik authentication."
+        python3 "${K8SROOT}/prepare-mcp-traefik.py" || exit 1
         echo "${ME}: Creating/refreshing Junos MCP devices config map from ${JUNOS_MCP_DEVICES}"
-        kubectl delete cm junos-mcp-devices-cm --namespace nita --ignore-not-found
-        kubectl create cm junos-mcp-devices-cm --from-file=devices.json=${JUNOS_MCP_DEVICES} --namespace nita
-
-        if [ -z "${JUNOS_MCP_TOKEN_VALUE}" ]; then
-            if [ -x "$(command -v openssl)" ]; then
-                JUNOS_MCP_TOKEN_VALUE="jmcp_$(openssl rand -hex 24)"
-            else
-                JUNOS_MCP_TOKEN_VALUE="jmcp_$(date +%s)_${RANDOM}${RANDOM}"
-            fi
-        fi
-
-        JUNOS_MCP_TOKEN_FILE=$(mktemp /tmp/junos-mcp-tokens.XXXXXX)
-        JUNOS_MCP_PROXY_CONF=$(mktemp /tmp/junos-mcp-nginx.XXXXXX)
-
-        cat > ${JUNOS_MCP_TOKEN_FILE} <<EOF
-{
-  "${JUNOS_MCP_TOKEN_ID}": {
-    "token": "${JUNOS_MCP_TOKEN_VALUE}",
-    "description": "NITA lab/demo internal token",
-    "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  }
-}
-EOF
-
-        cat > ${JUNOS_MCP_PROXY_CONF} <<EOF
-server {
-    listen 8090;
-    location /mcp {
-        rewrite ^/mcp$ /mcp/ break;
-        proxy_pass http://127.0.0.1:8091;
-        proxy_http_version 1.1;
-        proxy_set_header Authorization "Bearer ${JUNOS_MCP_TOKEN_VALUE}";
-        proxy_set_header Accept \$http_accept;
-        proxy_set_header Content-Type \$content_type;
-        proxy_set_header Host \$host;
-        proxy_set_header Connection "";
-        proxy_buffering off;
-        proxy_request_buffering off;
-        proxy_read_timeout 3600;
-    }
-}
-EOF
-
-        echo "${ME}: Creating/refreshing Junos MCP authentication secret and proxy config"
-        kubectl delete secret junos-mcp-auth --namespace nita --ignore-not-found
-        kubectl create secret generic junos-mcp-auth --from-file=.tokens=${JUNOS_MCP_TOKEN_FILE} --namespace nita
-        kubectl delete cm junos-mcp-proxy-cm --namespace nita --ignore-not-found
-        kubectl create cm junos-mcp-proxy-cm --from-file=default.conf=${JUNOS_MCP_PROXY_CONF} --namespace nita
-        rm -f ${JUNOS_MCP_TOKEN_FILE} ${JUNOS_MCP_PROXY_CONF}
+        kubectl create cm junos-mcp-devices-cm --from-file="devices.json=${JUNOS_MCP_DEVICES}" \
+            --namespace nita --dry-run=client -o yaml | kubectl apply -f - || exit 1
 
         echo "${ME}: Applying Junos MCP server deployment and service"
         envsubst '${JUNOS_MCP_IMAGE}' \
             < ${K8SROOT}/junos-mcp-deployment.yaml \
-            | kubectl apply -f -
-        kubectl apply -f ${K8SROOT}/junos-mcp-service.yaml
+            | kubectl apply -f - || exit 1
+        kubectl apply -f "${K8SROOT}/junos-mcp-service.yaml" || exit 1
+        kubectl rollout restart deployment/junos-mcp -n nita || exit 1
+        kubectl rollout status deployment/junos-mcp -n nita --timeout=3m || exit 1
+        python3 "${K8SROOT}/verify-mcp-proxy.py" || exit 1
 
         echo "${ME}: Junos MCP server pod requested. Service endpoint is available on port 8090 inside namespace nita and on the node IP for unauthenticated lab/demo access."
 
@@ -555,7 +518,7 @@ Question "Do you want to run Ansible as a standalone Docker container" && {
 
     # Running standalone Ansible containers requires docker
 
-    eval "${INSTALLER} docker-ce"
+    InstallPackages docker-ce || exit 1
 
     # This step will avoid the need to be a sudoer
 
@@ -598,11 +561,11 @@ Question "Do you want to install standalone yaml-to-excel tools" && {
 
             # Python isn't installed either
 
-            eval "${INSTALLER} python3"
+            InstallPackages python3 || exit 1
 
         fi
 
-        eval "${INSTALLER} python3-pip"
+        InstallPackages python3-pip || exit 1
 
     fi
 
@@ -621,7 +584,7 @@ Question "Do you want to install standalone yaml-to-excel tools" && {
 
 }
 
-Debug "ls -al ${NITAROOT}"
+Debug ls -al "${NITAROOT}"
 
 echo "${ME}: NITA installation has finished."
 echo ""

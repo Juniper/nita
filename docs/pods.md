@@ -11,7 +11,7 @@
 # DESCRIPTION
 
 NITA is packaged and executed as a series of Kubernetes pods, which communicate with one another via an Kubernetes component in charge of networking, Calico. There are four custom containers, 
-Ansible, Jenkins, Robot and the NITA Webapp, and two standard containers for Nginx and MariaDB. Jenkins, Webapp, Proxy and DB are persistent 
+Ansible, Jenkins, Robot and the NITA Webapp, and two standard containers for Traefik and MariaDB. Jenkins, Webapp, Proxy and DB are persistent
 (which means that they run continuously) whereas Ansible and Robot are ephemeral (i.e. they are started and stopped as and when required). 
 The move from older NITA version that was running on Docker to the new Kubernetes infrastructure will allow new improvements 
 of the product while also alowing the user to expand the functionality of the solution themselves.
@@ -35,7 +35,7 @@ jenkins-768f9cd99b-fprh8   1/1     Running   3 (128m ago)   90d
 proxy-86dfdffcf5-zqzmq     1/1     Running   3 (128m ago)   90d
 webapp-75d694ff55-xk252    1/1     Running   3 (128m ago)   90d
 ```
-Here you can see the two persistent NITA pods (Jenkins and the Webapp) plus pods for the Nginx webserver and the Maria SQL database. 
+Here you can see the two persistent NITA pods (Jenkins and the Webapp) plus pods for the Traefik proxy and the Maria SQL database.
 
 The trouble is that the ``kubectl`` client has a lot of options (type ``kubectl help`` to see what options are available) and this can make it complicated to use. 
 Therefore we have provided a number of shortcuts for the most useful options with the ``nita-cmd`` command, as outlined below. 

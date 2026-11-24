@@ -11,7 +11,7 @@ Containers. Almost everything you need to know about the containers used by NITA
 
 # DESCRIPTION
 
-NITA is packaged and executed as a series of Docker containers, which communicate with one another via an internal IPv4 subnet. There are four custom containers, one each for Ansible, Jenkins, Robot and the NITA Webapp, and two standard containers for Nginx and MariaDB. Of the custom containers, Jenkins and the Webapp are persistent (which means that they run continuously) whereas Ansible and Robot are ephemeral (i.e. they are started and stopped as and when required). Using a container based approach allows NITA to be easily packaged, distributed, deployed and run, and it also allows a user to add further custom containers if they wish to expand the functionality of the solution themselves later.
+NITA is packaged and executed as a series of Docker containers, which communicate with one another via an internal IPv4 subnet. There are four custom containers, one each for Ansible, Jenkins, Robot and the NITA Webapp, and two standard containers for Traefik and MariaDB. Of the custom containers, Jenkins and the Webapp are persistent (which means that they run continuously) whereas Ansible and Robot are ephemeral (i.e. they are started and stopped as and when required). Using a container based approach allows NITA to be easily packaged, distributed, deployed and run, and it also allows a user to add further custom containers if they wish to expand the functionality of the solution themselves later.
 
 ## Image Distribution and Tags
 
@@ -84,7 +84,7 @@ cfdc45177801        mariadb:10.4.12               "docker-entrypoint.s…"   4 m
 922a4eb21e05        juniper/nita-jenkins:22.8-1   "/sbin/tini -- /usr/…"   4 months ago        Up 47 minutes (healthy)   8080/tcp, 50000/tcp                    nitajenkins_jenkins_1
 $
 ```
-Here you can see the two persistent NITA containers (Jenkins and the Webapp) plus containers for the Nginx webserver and the Maria SQL database. 
+This historical example shows the former Nginx proxy. Current installations use Traefik instead.
 
 The trouble is that the ``docker`` client has a lot of options (type ``docker help`` to see what options are available) and this can make it complicated to use. Therefore we have provided a number of shortcuts for the most useful options with the ``nita-cmd`` command, as outlined below. 
 
@@ -153,7 +153,7 @@ Note that because the Ansible and Robot containers are ephemeral, when you ``exi
 
 ### With ``docker``
 
-NITA also uses some standard "vanilla" containers for the Maria database and the Nginx webserver and because these containers are not tagged as NITA (as they are not customised), they do not appear in the output of the ``nita-cmd containers ls`` command. They are however visible with the ``docker ps`` command, and you should use this to find a container's unique container identifier if you want to access its shell.
+NITA also uses standard containers for MariaDB and Traefik. They are visible with ``docker ps`` even though they are not tagged as NITA. The following output is a historical example from the Nginx deployment.
 
 For example, if you want to log into the Maria DB container, first run ``docker ps`` to find the container ID and then ``docker exec``, like this:
 

@@ -1,0 +1,6 @@
+displayName: NITA request body limit
+type: middleware
+import: github.com/Juniper/nita-webapp/traefik/bodylimit
+summary: Limit request bodies without buffering responses
+testData:
+  maxBytes: 20971520

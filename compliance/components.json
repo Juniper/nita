@@ -374,23 +374,23 @@
       ]
     },
     {
-      "id": "nginx",
-      "name": "nginx",
+      "id": "traefik",
+      "name": "Traefik",
       "category": "component",
-      "source": "https://nginx.org/",
-      "version": null,
-      "version_status": "mutable",
-      "reference": "Image nginx:stable",
+      "source": "https://github.com/traefik/traefik",
+      "version": "3.7.19",
+      "version_status": "exact",
+      "reference": "Image traefik:v3.7.19",
       "conditions": "Webapp proxy and optional Junos MCP proxy",
       "optional": false,
-      "license": null,
+      "license": "MIT",
       "license_sources": [
-        "https://nginx.org/LICENSE"
+        "https://github.com/traefik/traefik/blob/v3.7.19/LICENSE.md"
       ],
       "references": [
         {
           "kind": "image",
-          "value": "nginx:stable"
+          "value": "traefik:v3.7.19"
         }
       ]
     },
@@ -491,10 +491,6 @@
         {
           "kind": "repository",
           "value": "Juniper/nita-webapp"
-        },
-        {
-          "kind": "resource",
-          "value": "https://raw.githubusercontent.com/Juniper/nita-webapp/main/nginx/nginx.conf"
         }
       ]
     },

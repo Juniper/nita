@@ -65,7 +65,7 @@ The system SHALL provide `nita-cmd db restart` to restart the MariaDB pod.
 - THEN the db pod is restarted and returns to Running state
 
 ### Requirement: Proxy Restart
-The system SHALL provide `nita-cmd proxy restart` to restart the nginx proxy pod.
+The system SHALL provide `nita-cmd proxy restart` to restart the proxy pod.
 
 #### Scenario: Proxy restart
 - GIVEN the proxy pod is running

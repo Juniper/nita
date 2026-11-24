@@ -2,7 +2,7 @@
 # .github/scripts/setup-configmaps.sh
 #
 # Generates the self-signed certificates and Kubernetes ConfigMaps required
-# by the proxy (nginx) and jenkins deployments before the pods start.
+# by the proxy (Traefik) and Jenkins deployments before the pods start.
 #
 # This mirrors the certificate-generation section of install.sh so that the
 # same manifests used in production can be applied unchanged on a Kind cluster.
@@ -10,7 +10,6 @@
 set -euo pipefail
 
 KEYPASS="${KEYPASS:-nita123}"
-GITHUB_ORG="${GITHUB_ORG:-Juniper}"
 TMPDIR=$(mktemp -d)
 
 PROXY_DIR="${TMPDIR}/proxy"
@@ -23,18 +22,14 @@ trap cleanup EXIT
 mkdir -p "${CERTS_DIR}" "${JENKINS_DIR}"
 
 # ---------------------------------------------------------------------------
-# nginx: config + self-signed certificate
+# Traefik: configuration and self-signed certificate
 # ---------------------------------------------------------------------------
-echo "--- Downloading nginx.conf from nita-webapp repo ---"
-curl -fsSL \
-  "https://raw.githubusercontent.com/${GITHUB_ORG}/nita-webapp/main/nginx/nginx.conf" \
-  -o "${PROXY_DIR}/nginx.conf"
-
-echo "--- Generating nginx self-signed certificate (mirrors install.sh) ---"
+echo "--- Generating proxy self-signed certificate ---"
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout "${CERTS_DIR}/nginx-certificate-key.key" \
   -out    "${CERTS_DIR}/nginx-certificate.crt" \
   -subj   "/CN=nita-proxy/O=nita-test"
+CERTS="${CERTS_DIR}" bash k8s/prepare-traefik.sh
 
 # ---------------------------------------------------------------------------
 # Jenkins: JKS keystore -> PKCS12 -> PEM certificate
@@ -65,14 +60,6 @@ openssl pkcs12 \
 # Create the four ConfigMaps the proxy and jenkins deployments reference
 # ---------------------------------------------------------------------------
 echo "--- Creating Kubernetes ConfigMaps in namespace nita ---"
-
-kubectl create cm proxy-config-cm \
-  --from-file="${PROXY_DIR}/nginx.conf" \
-  --namespace nita
-
-kubectl create cm proxy-cert-cm \
-  --from-file="${CERTS_DIR}/" \
-  --namespace nita
 
 kubectl create cm jenkins-crt \
   --from-file="${JENKINS_DIR}/jenkins.crt" \
