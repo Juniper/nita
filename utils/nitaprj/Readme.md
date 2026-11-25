@@ -1,219 +1,214 @@
 # NITA Project Utility (`nitaprj.sh`)
 
-This utility script helps you create, build, and manage NITA-based network automation projects using predefined profiles.
+Use `nitaprj.sh` to create a project from a profile and package it for NITA.
+The default profile is `jtaf-ansible`; select `generic` explicitly when you
+want the generic template.
 
-## Features
+## Prerequisites
 
-- **Project Creation:**  
-  Create a new project directory from a profile template (default: `generic`).
+- Bash, Python 3, `zip`, and either `wget` or `curl`.
+- `yaml2xls.py` on `PATH` to build either profile. If it is missing, the script
+  offers to download and install it. Declining stops the build.
+- A NITA installation to upload and run the resulting project.
 
-- **Project Build:**  
-  Package your project files into a zip archive and generate an Excel summary of variables, with sensitive environment variables scrubbed.
+Run the commands below from the NITA repository's `utils/nitaprj` directory.
+The utility looks for `profiles/` relative to the current directory when
+creating a project. Replace example paths, project names, devices, and
+configuration values with those for your environment.
 
-- **Version Display:**  
-  Show the script version.
+## JTAF Ansible profile
 
-## Usage
+This workflow generates an Ansible role from Junos YANG models and device XML
+configurations, then packages the role and project variables for NITA.
 
-You can run the script in two ways, depending on your current directory:
+### 1. Install junos-terraform
 
-### 1. From Outside the Project Directory
+Install [junos-terraform](https://github.com/Juniper/junos-terraform) before
+generating the role and building the project. Its `jtaf-yang2ansible` and
+`jtaf-xml2yaml` commands must be available on `PATH`. Follow the
+[JTAF setup instructions](https://github.com/Juniper/junos-terraform#setup)
+for prerequisites, including Python 3.9+ and Git. For example, with an existing
+clone:
 
-Call the script as `nitaprj.sh` and specify the project name as an argument:
+```bash
+export NITA_ROOT="/path/to/nita"
+export JTAF_ROOT="/path/to/junos-terraform"
 
-```sh
-./nitaprj.sh build <projectname>
+cd "$JTAF_ROOT"
+python3 -m venv venv
+. venv/bin/activate
+python -m pip install -e .
+
+command -v jtaf-yang2ansible
+command -v jtaf-xml2yaml
 ```
 
-### 2. From Inside the Project Directory
+Keep the virtual environment active for the remaining commands. If either
+`command -v` produces no path, resolve the installation or `PATH` before
+continuing. The [JTAF Ansible guide](https://github.com/Juniper/junos-terraform/blob/master/README-ansible.md)
+describes the generator and the Ansible dependencies needed for deployment.
 
-Call the script as `nitaprj` (the script creates a symlink with this name in each project). The script automatically detects it is running inside a project by the name it is called:
+**Compatibility:** This version of `nitaprj.sh` expects the generator to
+produce an uncompressed `trimmed_schema.json` and invokes `jtaf-xml2yaml` with
+that file. The referenced junos-terraform checkout generates
+`trimmed_schema.json.gz` instead. With that version, the wrapper skips XML
+conversion and may report role generation as successful without populating the
+inventory and variables. Use a compatible JTAF version that produces the
+uncompressed schema, or update the wrapper for the newer format before
+continuing. Verify the generated inventory and variables before building.
 
-```sh
+### 2. Create the project
+
+```bash
+cd "$NITA_ROOT/utils/nitaprj"
+./nitaprj.sh create my-fabric
+```
+
+Because no profile was supplied, this creates `my-fabric` using
+`jtaf-ansible`. The equivalent explicit command is
+`./nitaprj.sh create my-fabric jtaf-ansible`. The script asks whether to
+initialize a Git repository; answer `y` or `n`.
+
+### 3. Generate the role and variables
+
+The following example uses the bundled JTAF 18.2R3 QFX models and EVPN-VXLAN
+XML configurations. Adjust the paths and patterns for your checkout and
+devices. `$JTAF_ROOT` must identify the checkout containing those files.
+
+```bash
+./nitaprj.sh generate-role my-fabric \
+  -p "$JTAF_ROOT/examples/yang/18.2/18.2R3/common" \
+     "$JTAF_ROOT"/examples/yang/18.2/18.2R3/junos-qfx/conf/*.yang \
+  -x "$JTAF_ROOT"/examples/evpn-vxlan-dc/dc1/*{spine,leaf}*.xml \
+     "$JTAF_ROOT"/examples/evpn-vxlan-dc/dc2/*spine*.xml \
+  -t vqfx \
+  -v 18.2R3
+```
+
+Run this example in Bash so brace and wildcard expansions select the files.
+Confirm that the patterns match the intended XML and YANG files before running
+the command. Use models for the target platform and Junos release; the example
+uses the JTAF 18.2R3 models rather than selecting a release automatically.
+
+#### `generate-role` arguments
+
+```text
+./nitaprj.sh generate-role <projectname> \
+  -p <yang-paths-and-files> -x <xml-config-files> -t <device-type> \
+  [-v <yang-version>]
+```
+
+| Argument | Meaning |
+|---|---|
+| `<projectname>` | Existing project directory created by `nitaprj.sh create`. |
+| `-p` | Required. One or more YANG search paths and model files. The example supplies the common model directory and QFX configuration models. All arguments up to the next option are passed to `jtaf-yang2ansible`. |
+| `-x` | Required. One or more device XML configuration files. They identify the configuration used to filter the schema and are also used to generate inventory and variables. Supply XML for the same device type. |
+| `-t` | Required. Device type or role identifier, such as `vqfx`. The role is placed in `roles/<device-type>_role`. It must not contain `/` or `..`. |
+| `-v` | Optional. A YANG version label, such as `18.2R3`, printed by the wrapper. It is not passed to the generator and does not select or validate the YANG models; choose the appropriate paths with `-p`. |
+
+The wrapper runs `jtaf-yang2ansible`, copies the generated role and filter
+plugins into the project, and adds the role to `build/sites.yaml` and the
+manifest. When the expected uncompressed schema is present, it also runs
+`jtaf-xml2yaml` to populate `hosts`, `group_vars`, and `host_vars`. Running the
+command again for the same device type replaces that generated role directory;
+review your project and generated data after each run.
+
+### 4. Review the project and build it
+
+1. Review `my-fabric/hosts`, `group_vars/`, and `host_vars/` for the expected
+   devices, management addresses, and configuration values.
+2. Review `my-fabric/build/sites.yaml`, the generated role, and `project.yaml`.
+   Check `build/runtime.yaml` for the NETCONF connection settings required by
+   your environment. The profile contains lab credential defaults; supply
+   appropriate credentials securely rather than committing them to the project.
+   For Kubernetes Secret-based credentials, provision a Secret in the job's
+   namespace with `ANSIBLE_NET_USERNAME` and `ANSIBLE_NET_PASSWORD` keys.
+   Set `NITA_NETCONF_SECRET` to its name in the Jenkins shell environment and
+   set `NITA_NAMESPACE` if the namespace is not `nita`. The generated job reads
+   both values from the Secret. Jenkins credential environment variables alone
+   are not automatically forwarded to the job.
+   The build excludes `group_vars/env.yaml` and `env.yml` from the archive, but
+   it does not remove secrets from other project files.
+3. Check `my-fabric/manifest` and add any additional files or directories that
+   your project needs in its archive.
+4. Build the project:
+
+   ```bash
+   ./nitaprj.sh build my-fabric
+   ```
+
+The command produces `my-fabric/my-fabric.zip` and
+`my-fabric/my-fabric.xlsx`. It packages the manifest entries and generates the
+workbook from YAML files under `group_vars` and `host_vars`, excluding
+`registry.yaml`. Existing output files are moved to `.bak` files.
+
+### 5. Use the project in NITA
+
+1. In the NITA web application, add the ZIP as a network type.
+2. Add a network using that network type and the project's `hosts` file.
+3. Import the generated XLSX workbook into the network configuration. Review
+   the configuration and device connectivity before triggering a build.
+4. Run the appropriate project action in NITA. Packaging with `nitaprj.sh build`
+   does not itself deploy configuration to devices.
+
+For the NITA interface workflow, see [NITA examples](../../docs/nita-examples.md).
+
+## Generic profile
+
+Use this profile when you want to prepare the inventory, playbooks, roles, and
+variables yourself rather than generating a JTAF role.
+
+### 1. Create a generic project
+
+```bash
+export NITA_ROOT="/path/to/nita"
+cd "$NITA_ROOT/utils/nitaprj"
+./nitaprj.sh create my-generic-project generic
+```
+
+The final `generic` argument is required to select this profile. Answer `y` or
+`n` when prompted to initialize a Git repository.
+
+### 2. Configure the project
+
+1. Edit `my-generic-project/hosts` for your devices and inventory groups.
+2. Update the YAML files in `group_vars/` and `host_vars/` with your own
+   configuration and connection details. Review the template's lab defaults
+   and avoid committing credentials.
+3. Customize `build/sites.yaml`, the referenced roles and templates, and
+   `project.yaml` for your network. Add any role or template files needed by
+   your playbooks; the profile is a starting point, not a complete project for
+   every network.
+4. Update `manifest` to include the files and directories needed in the ZIP.
+   For background on project structure, see [Projects](../../docs/projects.md).
+
+### 3. Build and use the project
+
+```bash
+./nitaprj.sh build my-generic-project
+```
+
+This creates `my-generic-project/my-generic-project.zip` and
+`my-generic-project/my-generic-project.xlsx`. As with the JTAF profile, upload
+the ZIP as a network type, create a network with the `hosts` file, import the
+workbook, and review the configuration before running a project action.
+
+## Commands from inside a project
+
+Each created project contains a `nitaprj` symlink. From inside the project,
+omit the project name when generating a role or building:
+
+```bash
+cd "$NITA_ROOT/utils/nitaprj/my-fabric"
+./nitaprj generate-role -p <yang-paths-and-files> -x <xml-config-files> -t <device-type>
 ./nitaprj build
 ```
 
-### Commands
-
-- `create <projectname> [profilename]`  
-  Create a new project directory using the specified profile (default: `generic`).  
-  **Note:** The `create` command can only be run from outside the project directory.
-
-- `build <projectname>`  
-  Build the specified project (creates a zip archive and an xlsx file).
-
-- `version`  
-  Display the script version.
-
-### Example
-
-```sh
-# Create a new project called myproject (from outside any project directory)
-./nitaprj.sh create myproject
-
-# Build the project from outside the project directory
-./nitaprj.sh build myproject
-
-# Or, build the project from inside the project directory
-cd myproject
-./nitaprj build
-```
-
-## Notes
-
-### JTAF Ansible builds
-
-The `jtaf-ansible` profile renders generated roles before deploying their XML with
-`juniper.device.config` using `load: merge`. It does not use the legacy
-`junos_commit_config` role, which assembles text `.cfg` fragments.
-
-Before deployment, the profile inspects the generated IPv4 configuration for the
-management unit (`management_interface.int`, default `em0.0`; bare names such as
-the enrichment helper's `em0` refer to unit `0`). Static addresses are detected
-both directly under `configuration/interfaces` and in active, globally applied
-configuration groups such as the generated `JTAF_ANSIBLE` group. Unapplied,
-inactive, and globally excluded groups are ignored. If that unit has
-an active static address, it retrieves its committed DHCP configuration without
-loading or committing changes. Existing active DHCP is marked for deletion in a
-separate, private copy of the generated XML. The DHCP deletion and static address
-are then loaded and committed together; there is no separate DHCP-removal commit.
-Other interfaces, DHCP-only management units, and IPv6 configuration are unchanged.
-If DHCP is already absent, no deletion is emitted. Invalid XML, ambiguous management
-entries, conflicting generated DHCP/static settings, and retrieval errors stop
-deployment. Inherited DHCP or unrelated pending candidate changes require separate
-review; this workflow does not alter configuration groups or discard candidates.
-For grouped static addresses, the DHCP deletion is added to the top-level
-management interface, where the existing explicit DHCP resides, not to the group.
-Group contents and `apply-groups` are preserved. Interface-scoped or nested group
-application and inherited DHCP still require separate review.
-
-The deployment also retrieves committed logical units on explicitly named
-physical ports configured as aggregate members or VLAN-tagged interfaces.
-Conflicting empty units (containing only their name) are marked for deletion at
-the top-level interface, without changing the generated configuration group.
-Aggregate members cannot retain active logical units. On tagged ports, only
-units absent from the generated configuration and lacking a VLAN ID are
-considered for cleanup; desired units and existing valid tagged units are kept.
-Non-empty conflicting units stop deployment for manual review rather than being
-deleted. Inactive units, unrelated ports, and ordinary untagged interfaces are
-unchanged. Inherited logical units and interface-scoped group application require
-separate review. Invalid generated aggregation/tagging settings and retrieval
-failures also stop deployment. DHCP and empty-unit deletions are prepared in
-private XML copies and included in the existing single merge/commit transaction.
-
-Existing projects must copy both `build/commit.yaml` and
-`filter_plugins/nita_management.py` from `profiles/jtaf-ansible` before using this
-behavior. Updating the profile alone does not update an uploaded project archive.
-The filter is automatically packaged through the existing `filter_plugins`
-manifest entry. Management changes can affect connectivity; validate the intended
-static address and access path before deployment.
-
-Runtime paths live in `build/runtime.yaml`, outside workbook-managed
-`group_vars` and `host_vars`. Generated roles load this file and write separate
-XML files for each device under `/var/tmp/build/<host>/xml`. Do not put runtime
-defaults only in `group_vars/all.yaml`: workbook generation replaces that file.
-
-New `jtaf-ansible` projects include `enrich_variables.py` in their archives.
-After each workbook update, `run_build.sh` uses it to restore
-`management_interface` from the IPv4 address on `em0.0` before creating the
-Ansible Job. Missing or ambiguous addresses stop the launcher. Hostname
-preparation uses this address when `ansible_host` is the inventory name, while
-preserving explicit `ansible_host` overrides.
-
-Enrichment also restores presence flags that workbook conversion turned into
-text. YANG `empty` leaves become boolean `true`; `false` omits the statement.
-Ordinary string fields are unchanged. `generate-role` records empty leaf
-elements observed in the input XML in `configs/empty_leaf_paths.json`, including
-presence flags modeled as strings by the schema. The hint file is included in
-the project archive with `configs`.
-
-For an existing project, copy the updated enrichment helper and record these
-hints using the original XML inputs before the next build:
-
-```sh
-python3 enrich_variables.py . --record-empty-leaves /path/to/device1.xml /path/to/device2.xml
-```
-
-For existing projects, copy `enrich_variables.py` from this utility directory,
-add it to the project manifest, and update `run_build.sh` and
-`make_etc_hosts.yaml` from the profile. A non-default management interface can
-be specified in `variable_metadata.yaml` as supported by the enrichment helper.
-
-The device username (from `ANSIBLE_NET_USERNAME`, falling back to `jcluser`),
-password (from `ANSIBLE_NET_PASSWORD`, falling back to the default lab password)
-and NETCONF port (`830`) also live in
-`build/runtime.yaml` so workbook updates cannot remove them. Edit that file for
-your environment; these play-level values override inventory values, including
-any `netconf_user` or `netconf_passwd` rows in the workbook, while
-Ansible extra variables can override them per invocation.
-The packaged password is a lab default and travels in the project archive. For
-any other credentials, supply `ANSIBLE_NET_USERNAME` and `ANSIBLE_NET_PASSWORD`
-through the job's environment (optional `group_vars/env.yaml`, or a Secret as
-described below) instead of editing them into the archive. To use SSH key
-authentication, remove `netconf_passwd` from `build/runtime.yaml`.
-
-For Secret-based authentication, provision a Kubernetes Secret containing keys
-`ANSIBLE_NET_USERNAME` and `ANSIBLE_NET_PASSWORD` in the job's namespace. Then
-configure the Jenkins shell environment (or your interactive shell):
-
-```sh
-export NITA_NETCONF_SECRET=my-fabric-netconf-credentials
-export NITA_NAMESPACE=nita
-bash ./run_build.sh
-```
-
-`NITA_NAMESPACE` defaults to `nita` and is used by both the generated Job and
-every launcher Kubernetes operation. `NITA_NETCONF_SECRET` is optional: when set,
-both credential variables use required `secretKeyRef` entries, replacing any
-same-named plaintext entries from `group_vars/env.yaml`. Unrelated environment
-variables remain unchanged. A missing Secret or key prevents the pod from
-starting; the `build/runtime.yaml` defaults are not used in that case. When
-unset, the job uses credentials from `group_vars/env.yaml` if present, otherwise
-the `build/runtime.yaml` defaults. Jenkins environment credentials are
-not automatically forwarded to the job. Provision Secret values outside the
-repository; never commit them.
-
-Jenkins runs `bash ./run_build.sh`, which checks Kubernetes Job completion after
-streaming logs. Rendering or deployment failures now fail the build. A previous
-`build` Job must have been removed (normally by its 120-second TTL) before a new
-build can start; an existing Job causes an explicit error instead of reusing its
-result.
-
-Both shell entry points resolve paths relative to their own project directory.
-Before rendering, `build.sh` syntax-checks the deployment playbook to catch
-missing collections without deploying. Deployment uses `ansible_host`, then
-`management_interface.ip`, then the inventory hostname, stripping any CIDR suffix.
-
-The rendering playbook first imports `make_etc_hosts.yaml` to populate device
-hostname resolution inside the Ansible container. Each device requires
-`ansible_host` or `management_interface.ip`. The task uses Ansible's built-in
-`lineinfile` module rather than the generic profile's shell/sudo helper, serializes
-updates, and permits in-place writes for container-mounted `/etc/hosts`.
-The container user must have write access to that file.
-
-To validate rendering without contacting devices (but updating the container's
-`/etc/hosts`), run inside the Ansible image:
-
-```sh
-ansible-playbook -i hosts build/sites.yaml
-```
-
-`bash build.sh [output-directory]` renders and then deploys configuration.
-
-- The script will prompt to install `yaml2xls.py` if not found, which is required for generating the Excel file.
-- Sensitive environment variables in `group_vars/env.yaml` are scrubbed before packaging.
-- The script expects a `manifest` file in the project directory to determine which files to include in the archive.
-- The script distinguishes between being run from inside or outside a project directory by checking the name it is called with (`nitaprj.sh` vs `nitaprj`).
-
-## Directory Structure
-
-- `profiles/` - Contains project templates (profiles).
-- `group_vars/` and `host_vars/` - Ansible variable files.
-- `manifest` - List of files/directories to include in the build archive.
+Replace the placeholders with actual arguments. Paths passed to `generate-role`
+are resolved from the current directory. The `create` command is available only
+outside a project; use `./nitaprj.sh version` to display the utility version.
 
 ## License
 
-See individual files for license information.  
-Default profile and scripts are licensed under the Apache 2.0 License.
-
----
+See individual files for license information. The default profile and scripts
+are licensed under the Apache 2.0 License.

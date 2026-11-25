@@ -90,7 +90,7 @@ usage() {
     fi
     echo "Usage: $0 <command> [options]"    
     echo "Commands:"
-    echo "  create <projectname> [profilename] Create a new project"
+    echo "  create <projectname> [profilename] Create a new project (default profile: jtaf-ansible)"
     echo "  generate-role <projectname> -p <yang-paths-and-files> -x <xml-config-files> -t <device-type> [-v <yang-version>]"
     echo "  build <projectname>  Build the project" 
     echo "  version" 
@@ -137,7 +137,7 @@ action_create() {
         echo "Error: Directory '$project_name' already exists."
         exit 1
     fi      
-    profile_name=${2:-generic}
+    profile_name=${2:-jtaf-ansible}
     echo "Creating project '$project_name' using profile '$profile_name'"
     mkdir $project_name
     cp -r $PROFILE_DIR/${profile_name}/* $project_name
