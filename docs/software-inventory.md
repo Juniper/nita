@@ -1,7 +1,7 @@
 # Software inventory
 
 NITA publishes a **pre-build inventory of declared direct dependencies** for this
-repository. It covers the NITA component references, nginx/MariaDB, host package
+repository. It covers the NITA component references, Traefik/MariaDB, host package
 requirements, Kubernetes/Calico, optional tools, and the generic project
 builder's Python imports.
 
@@ -92,7 +92,7 @@ Catalog fields:
 | `license`, `license_sources` | Verified SPDX identifier or `null`, plus HTTPS sources for review |
 | `references` | Owned declarations: `package`, `image`, `repository`, `resource`, `python`, `python-install`, or `tool` |
 
-For example, `nginx:stable` is a mutable image reference, `v1.28` is a Kubernetes
+For example, `mariadb:10.11` is a mutable image reference, `v1.28` is a Kubernetes
 package channel, and `openjdk-21-jre-headless` does not specify the installed
 patch version. These are not exact component versions. An unknown license is
 omitted from the SBOM's license assertions and marked unknown in its properties.

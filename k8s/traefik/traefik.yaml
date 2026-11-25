@@ -1,0 +1,30 @@
+entryPoints:
+  web:
+    address: ":8000"
+    transport:
+      respondingTimeouts:
+        readTimeout: 0s
+        writeTimeout: 0s
+  websecure:
+    address: ":443"
+    transport:
+      respondingTimeouts:
+        readTimeout: 0s
+        writeTimeout: 0s
+  health:
+    address: ":8082"
+ping:
+  entryPoint: health
+providers:
+  kubernetesIngress:
+    namespaces: [nita]
+    ingressClass: nita-traefik
+    strictPrefixMatching: true
+  file:
+    filename: /etc/traefik/routes.yaml
+experimental:
+  localPlugins:
+    bodylimit:
+      moduleName: github.com/Juniper/nita-webapp/traefik/bodylimit
+    identityguard:
+      moduleName: github.com/Juniper/nita-webapp/traefik/identityguard

@@ -5,7 +5,22 @@ name: NITA CI
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "30 3 * * 0"
   workflow_dispatch:
+    inputs:
+      long_mcp_stream:
+        description: Run the 3600-second MCP idle stream check
+        type: boolean
+        default: false
+      webapp_repository:
+        description: Public companion webapp repository for a source-built test image (owner/repo)
+        type: string
+        required: false
+      webapp_ref:
+        description: Exact 40-character commit SHA of the companion webapp
+        type: string
+        required: false
 
 permissions: read-all
 
@@ -46,7 +61,7 @@ jobs:
       - name: Kubernetes schema validation
         env:
           CONTAINER_REGISTRY: ghcr.io/juniper
-          NITA_WEBAPP_IMAGE: ghcr.io/juniper/nita-webapp:latest
+          NITA_WEBAPP_IMAGE: ${{ vars.NITA_WEBAPP_IMAGE || 'ghcr.io/juniper/nita-webapp:latest' }}
           NITA_JENKINS_IMAGE: ghcr.io/juniper/nita-jenkins:latest
           NITA_ANSIBLE_IMAGE: ghcr.io/juniper/nita-ansible:latest
           NITA_ROBOT_IMAGE: ghcr.io/juniper/nita-robot:latest
@@ -64,6 +79,35 @@ jobs:
               || failed=1
           done
           exit $failed
+
+      - name: Test MCP Traefik routing and migration
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO https://github.com/traefik/traefik/releases/download/v3.7.19/traefik_v3.7.19_linux_amd64.tar.gz
+          curl -fsSLO https://github.com/traefik/traefik/releases/download/v3.7.19/traefik_v3.7.19_checksums.txt
+          grep ' traefik_v3.7.19_linux_amd64.tar.gz$' traefik_v3.7.19_checksums.txt | sha256sum --check
+          tar -xzf traefik_v3.7.19_linux_amd64.tar.gz traefik
+          cd "$GITHUB_WORKSPACE"
+          TRAEFIK_BINARY="$RUNNER_TEMP/traefik" python3 -m unittest discover -s tests -p test_mcp_traefik.py -v
+
+  long-mcp-stream:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.long_mcp_stream)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - name: Download pinned Traefik
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO https://github.com/traefik/traefik/releases/download/v3.7.19/traefik_v3.7.19_linux_amd64.tar.gz
+          curl -fsSLO https://github.com/traefik/traefik/releases/download/v3.7.19/traefik_v3.7.19_checksums.txt
+          grep ' traefik_v3.7.19_linux_amd64.tar.gz$' traefik_v3.7.19_checksums.txt | sha256sum --check
+          tar -xzf traefik_v3.7.19_linux_amd64.tar.gz traefik
+      - name: Test 3600-second MCP idle stream
+        env:
+          TRAEFIK_BINARY: ${{ runner.temp }}/traefik
+          TRAEFIK_MCP_LONG_STREAM: "1"
+        run: python3 -m unittest discover -s tests -p test_mcp_traefik.py -v
 
 # ---------------------------------------------------------------------------
 # JOB 2 — E2E on Kind: deploy NITA on a real (lightweight) Kubernetes cluster
@@ -84,7 +128,8 @@ jobs:
       CLUSTER_NAME: nita-${{ matrix.architecture }}
       CONTAINER_REGISTRY: ghcr.io/juniper
       GITHUB_ORG: Juniper
-      NITA_WEBAPP_IMAGE: ghcr.io/juniper/nita-webapp:latest
+      NITA_WEBAPP_IMAGE: ${{ inputs.webapp_repository != '' && 'nita-webapp-verification:local' || vars.NITA_WEBAPP_IMAGE || 'ghcr.io/juniper/nita-webapp:latest' }}
+      NITA_WEBAPP_FROM_SOURCE: ${{ inputs.webapp_repository != '' && 'true' || 'false' }}
       NITA_JENKINS_IMAGE: ghcr.io/juniper/nita-jenkins:latest
       NITA_ANSIBLE_IMAGE: ghcr.io/juniper/nita-ansible:latest
       NITA_ROBOT_IMAGE: ghcr.io/juniper/nita-robot:latest
@@ -92,6 +137,32 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6.0.2
+
+      - name: Validate companion source selection
+        env:
+          WEBAPP_REPOSITORY: ${{ inputs.webapp_repository }}
+          WEBAPP_REF: ${{ inputs.webapp_ref }}
+        run: |
+          if [[ -z "$WEBAPP_REPOSITORY" && -z "$WEBAPP_REF" ]]; then
+            exit 0
+          fi
+          if [[ ! "$WEBAPP_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ || ! "$WEBAPP_REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "Both a public owner/repository and a 40-character webapp commit SHA are required." >&2
+            exit 1
+          fi
+
+      - name: Check out companion webapp
+        if: inputs.webapp_repository != ''
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: ${{ inputs.webapp_repository }}
+          ref: ${{ inputs.webapp_ref }}
+          path: .ci-webapp
+          persist-credentials: false
+
+      - name: Build companion webapp test image
+        if: inputs.webapp_repository != ''
+        run: docker build --tag "$NITA_WEBAPP_IMAGE" .ci-webapp
 
       # gettext-base  — provides envsubst (used by apply-k8s.sh)
       # openjdk-17-jdk — provides keytool (required by setup-configmaps.sh)
@@ -126,7 +197,7 @@ jobs:
           images=(
             "mariadb:10.11"
             "nginx:stable"
-            "${NITA_WEBAPP_IMAGE}"
+            "traefik:v3.7.19"
             "${NITA_JENKINS_IMAGE}"
             "${NITA_ANSIBLE_IMAGE}"
             "${NITA_ROBOT_IMAGE}"
@@ -136,6 +207,10 @@ jobs:
             docker pull "${img}"
             kind load docker-image "${img}" --name "${CLUSTER_NAME}"
           done
+          if [[ "$NITA_WEBAPP_FROM_SOURCE" != "true" ]]; then
+            docker pull "${NITA_WEBAPP_IMAGE}"
+          fi
+          kind load docker-image "${NITA_WEBAPP_IMAGE}" --name "${CLUSTER_NAME}"
 
       # Apply resources with no ConfigMap dependencies first:
       # namespace → storage (SC, PVs, PVCs) → RBAC
@@ -151,50 +226,17 @@ jobs:
           kubectl apply -f service-account.yaml
           kubectl apply -f cluster-role.yaml
           kubectl apply -f role-binding.yaml
+          kubectl apply -f traefik-resources.yaml
 
       # Generate self-signed certs and create the four ConfigMaps that the
       # proxy and jenkins deployments mount. Must run before those deployments.
       - name: Generate certificates and create ConfigMaps
         run: bash .github/scripts/setup-configmaps.sh
 
-      # Apply deployments and services. Notes:
-      #   - webapp/jenkins use complete image overrides → envsubst required
-      #   - webapp also uses ${CSRF_TRUSTED_ORIGINS} → built from hostname/IPs
-      #   - jenkins-service.yaml was exported from a live cluster and contains
-      #     a hardcoded clusterIP, clusterIPs block, resourceVersion and uid.
-      #     sed strips these fields so kubectl apply succeeds on a fresh cluster.
-      - name: Apply deployments and services
+      # Exercise the same prerequisite checks and cutover ordering as installation.
+      - name: Apply NITA using the installation workflow
         working-directory: k8s
-        run: |
-          # Build CSRF_TRUSTED_ORIGINS from the runner's hostname and all IPs
-          _origins="https://localhost,http://localhost"
-          _host=$(hostname 2>/dev/null || true)
-          [[ -n "$_host" ]] && _origins="https://${_host},http://${_host},${_origins}"
-          for _ip in $(hostname -I 2>/dev/null); do
-            _origins="https://${_ip},http://${_ip},${_origins}"
-          done
-          export CSRF_TRUSTED_ORIGINS="${_origins}"
-          echo "CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}"
-
-          kubectl apply -f db-service.yaml
-          kubectl apply -f db-deployment.yaml
-
-          kubectl apply -f webapp-service.yaml
-          # shellcheck disable=SC2016
-          envsubst '${NITA_WEBAPP_IMAGE} ${CSRF_TRUSTED_ORIGINS}' < webapp-deployment.yaml | kubectl apply -f -
-
-          # Clean live-cluster metadata from jenkins-service before applying
-          sed \
-            -e '/^  clusterIP:/d' \
-            -e '/^  clusterIPs:/d' \
-            -e '/^  - 10\.[0-9]/d' \
-            -e '/  resourceVersion:/d' \
-            -e '/  uid:/d' \
-            jenkins-service.yaml | kubectl apply -f -
-          # shellcheck disable=SC2016
-          envsubst '${NITA_JENKINS_IMAGE} ${NITA_ANSIBLE_IMAGE} ${NITA_ROBOT_IMAGE}' < jenkins-deployment.yaml | kubectl apply -f -
-
-          kubectl apply -f proxy-deployment.yaml
+        run: bash apply-k8s.sh
 
       # ---------------------------------------------------------------------------
       # Wait for each deployment to reach the Running/Ready state
@@ -251,6 +293,10 @@ jobs:
       # Jenkins is the slowest to start: keystore import in postStart + plugin loading
       - name: Wait for jenkins rollout
         run: kubectl rollout status deployment/jenkins -n nita --timeout=10m
+
+      - name: Verify HTTPS proxy and Jenkins session gate
+        working-directory: k8s
+        run: python3 verify-proxy.py
 
       # ---------------------------------------------------------------------------
       # Smoke tests
@@ -367,6 +413,20 @@ jobs:
 
       - name: Install integration-test dependencies
         run: pip install -r requirements-integration-test.txt
+
+      - name: Verify the real webapp session and Jenkins identity through Traefik
+        env:
+          NITA_PROXY_SESSION_TEST: "1"
+        run: pytest -c /dev/null tests/integration/test_proxy_session_gate.py -q
+
+      - name: Test migration prerequisites and rollback snapshots
+        run: pytest -c /dev/null tests/test_proxy_backup.py tests/test_proxy_certificate.py tests/test_traefik_preflight.py tests/test_installer_regression.py tests/test_software_inventory.py tests/test_traefik_configuration.py -q
+
+      - name: Test Kubernetes ingress and MCP migration
+        env:
+          NITA_K8S_PROXY_TEST: "1"
+          NITA_K8S_TEST_IMAGE: ${{ env.NITA_WEBAPP_IMAGE }}
+        run: pytest -c /dev/null tests/test_traefik_kubernetes.py tests/test_mcp_kubernetes.py -v
 
       - name: Install Playwright browser
         run: playwright install chromium --with-deps

@@ -1,0 +1,31 @@
+http:
+  middlewares:
+    bodylimit:
+      plugin:
+        bodylimit:
+          maxBytes: 20971520
+    jenkins-slash:
+      redirectRegex:
+        regex: "^(https?://[^/]+)/jenkins(\\?.*)?$"
+        replacement: "${1}/jenkins/${2}"
+    jenkins-headers:
+      headers:
+        customRequestHeaders:
+          Authorization: ""
+          X-Forwarded-Prefix: /jenkins
+    jenkins-auth:
+      forwardAuth:
+        address: http://webapp:8000/api/v1/auth/forward/
+        trustForwardHeader: false
+        preserveLocationHeader: true
+        authRequestHeaders: [Cookie]
+        authResponseHeaders: [X-Forwarded-User, X-Forwarded-Groups]
+    jenkins-identity:
+      plugin:
+        identityguard: {}
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/certificate/tls.crt
+        keyFile: /etc/certificate/tls.key

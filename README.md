@@ -63,6 +63,9 @@ Install system dependencies (y|n|q)? [y]
 ```
 Answer ``Y`` for each action that you want to perform, ``N`` to skip and ``Q`` to quit out of the script completely. Most people will just need to press enter (for ``Y``) and accept the defaults. Note that on a barebones system, you will need approximately 8GB of free storage in order to install NITA, which includes all of the system dependencies and the Kubernetes pods.
 
+Package update and installation failures stop the installer. Debug output does
+not include `KEYPASS`.
+
 ## Environment Variables
 
 The ``install.sh`` script uses several environment variables, which you can set in the parent shell beforehand if you want to use something other than the defaults. These variables are outlined in this table:
@@ -73,22 +76,90 @@ Environment Variable | Default Value | Meaning
 ``BINDIR`` | ``/usr/local/bin`` | Where to install executables such as ``nita-cmd``
 ``BASH_COMPLETION`` | ``/etc/bash_completion.d`` | Location of bash completion files
 ``K8SROOT`` | ``$NITAROOT/nita/k8s`` | Location of Kubernetes ``YAML`` files
-``PROXY`` | ``$K8SROOT/proxy`` | Location of ``nginx`` configuration
-``CERTS`` | ``$PROXY/certificates`` | Location of ``nginx`` certificate files
-``JENKINS`` | ``$K8SROOT/jenkins`` | Location of Jenkins keys and certificate files
+``PROXY`` | ``$K8SROOT/proxy`` | Parent directory for proxy certificates
+``CERTS`` | ``$PROXY/certificates`` | Location of proxy certificate files
+``JENKINS`` | ``/var/jenkins_home`` | Location of Jenkins keys and certificate files
 ``KEYPASS`` | ``nita123`` | Passkey used to create self-signed Jenkins keys
 ``KUBEROOT`` | ``/etc/kubernetes`` | System location for Kubernetes configuration
 ``KUBECONFIG`` | ``$KUBEROOT/admin.conf`` | Location of user's Kubernetes configuration
 ``CONTAINER_REGISTRY`` | ``ghcr.io/juniper`` | Registry namespace used to construct default NITA image references
 ``GITHUB_ORG`` | ``Juniper`` | GitHub organization used when cloning NITA repositories and configuration
+``NITA_GIT_REF`` | ``main`` | NITA branch or tag to clone for installer manifests and scripts
 ``NITA_WEBAPP_IMAGE`` | ``ghcr.io/juniper/nita-webapp:latest`` | Complete Webapp image reference; a tag or digest is accepted
 ``NITA_JENKINS_IMAGE`` | ``ghcr.io/juniper/nita-jenkins:latest`` | Complete Jenkins image reference; a tag or digest is accepted
 ``NITA_ANSIBLE_IMAGE`` | ``ghcr.io/juniper/nita-ansible:latest`` | Complete Ansible worker image reference passed into Jenkins
 ``NITA_ROBOT_IMAGE`` | ``ghcr.io/juniper/nita-robot:latest`` | Complete Robot worker image reference passed into Jenkins
 ``JUNOS_MCP_IMAGE`` | ``ghcr.io/juniper/junos-mcp-server:latest`` | Complete optional Junos MCP image reference
 ``JUNOS_MCP_DEVICES`` | ``$NITAROOT/nita/examples/mcp/devices.json`` | Default device mapping file for optional Junos MCP server pod
+``JUNOS_MCP_TOKEN_ID`` | ``nita-lab`` | Internal MCP token identifier
+``JUNOS_MCP_TOKEN_VALUE`` | generated | Internal MCP token; existing installations retain their token
+``JUNOS_MCP_ROTATE`` | ``false`` | Set to ``true`` with a new token value to rotate the MCP token
 ``DEBUG`` | unset | Set it to true in the parent shell, to see additional output
 ``IGNORE_WARNINGS`` | unset | Set it to true in the parent shell if you want to install NITA and ignore any important warnings
+
+When preparing the proxy certificate, the installer reuses a valid certificate
+and key in `CERTS`. If those files are missing, it attempts to restore the
+existing pair from the Traefik TLS Secret or the legacy `proxy-cert-cm`.
+If a proxy deployment exists but no usable
+pair can be found, installation stops rather than replacing its certificate.
+The installer stores the pair in the `nita-traefik-tls` TLS Secret.
+
+### Traefik migration and rollback
+
+The main proxy uses Traefik v3.7.19 with the dedicated `nita-traefik`
+IngressClass and retains `deployment/proxy` and host port 443. Install a
+webapp image that implements the Traefik forward-auth contract together with
+this proxy; older webapp images and the new proxy are not compatible. Before
+upgrading, back up the running proxy and webapp Deployment manifests and image
+references, the existing proxy configuration and TLS resources, and the MCP
+Deployment and Secret if MCP is installed:
+
+```shell
+python3 k8s/backup-proxy.py nita-proxy-backup
+```
+
+Use a new backup directory for each upgrade. The backup includes existing
+Nginx and Traefik resources, strips server-managed fields, and fails if a
+referenced proxy resource is missing. Restrict access to the backup: it
+contains private keys and tokens.
+
+Run the new installer from a checkout containing this migration and select a
+compatible `NITA_WEBAPP_IMAGE`. The installer does not update an existing
+`$NITAROOT/nita` checkout; update that checkout separately or point `K8SROOT`
+at the new checkout's `k8s` directory. Answer yes to installing NITA
+repositories to apply the main-proxy migration, and yes to the MCP prompt only
+if MCP is installed or desired. `NITA_GIT_REF` affects fresh clones only.
+
+The installer preserves the old Nginx ConfigMaps and MCP Secret for rollback.
+The proxy changes require a brief interruption because only one pod can bind
+host port 443. It waits for the rollout and checks the certificate, webapp
+route, and anonymous Jenkins login redirect. If validation fails, restore the
+backed-up Nginx proxy and the compatible old webapp Deployment together with
+the commands below. If MCP was migrated, restore its Secret, ConfigMap and
+Deployment separately. Do not remove the old resources before confirming the
+migration.
+
+```shell
+kubectl apply -f nita-proxy-backup/proxy-and-webapp.json
+kubectl rollout status deployment/webapp -n nita
+kubectl rollout status deployment/proxy -n nita
+# When rolling MCP back:
+kubectl apply -f nita-proxy-backup/mcp.json
+kubectl rollout status deployment/junos-mcp -n nita
+```
+
+For an intentional certificate replacement, validate
+the new pair, update the files in `CERTS`, then update `nita-traefik-tls` with
+the commands below. The installer rejects a certificate that differs from the
+currently active proxy certificate.
+
+```shell
+kubectl create secret tls nita-traefik-tls -n nita \
+  --cert="$CERTS/nginx-certificate.crt" --key="$CERTS/nginx-certificate-key.key" \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl rollout restart deployment/proxy -n nita
+kubectl rollout status deployment/proxy -n nita
+```
 
 The five image variables are complete references, not tag fragments. This
 allows components to be selected independently and supports immutable pins:
@@ -98,6 +169,14 @@ export NITA_WEBAPP_IMAGE=ghcr.io/juniper/nita-webapp:sha-0123456789ab
 export NITA_JENKINS_IMAGE=ghcr.io/juniper/nita-jenkins@sha256:<digest>
 sudo -E ./install.sh
 ```
+
+For a coordinated CI test before the compatible webapp image is published,
+manually run the NITA CI workflow with `webapp_repository` set to the public
+companion repository (`owner/repo`) and `webapp_ref` set to its full commit
+SHA. CI builds that revision locally and loads the image into Kind; it does not
+publish it. Leave both inputs empty to test the published image selected by the
+`NITA_WEBAPP_IMAGE` repository variable or its default. This source-build
+verification does not replace testing the final published release image.
 
 ## Container Images and Architectures
 
@@ -138,10 +217,10 @@ If you answer ``Y``, the installer will:
 
 1. Select ``$JUNOS_MCP_IMAGE`` (default: ``ghcr.io/juniper/junos-mcp-server:latest``)
 2. Create a ConfigMap from the default device mapping file at ``$JUNOS_MCP_DEVICES`` (default: ``/opt/nita/examples/mcp/devices.json``)
-3. Generate an internal MCP token plus an nginx proxy config for lab/demo use
+3. Generate or reuse an internal MCP token and Traefik proxy configuration
 4. Deploy the MCP server pod and service in the ``nita`` namespace, listening on port 8090; Kubernetes pulls the selected image when needed
 
-For the packaged NITA lab/demo deployment, the MCP backend stays token-protected on loopback inside the pod and an nginx sidecar listens on port 8090, injecting the internal token on behalf of clients. This keeps the upstream MCP server in its supported authenticated mode while allowing off-box demo access without per-user token setup.
+For the packaged NITA lab/demo deployment, the MCP backend stays token-protected on loopback inside the pod and a Traefik sidecar listens on port 8090, injecting the internal token on behalf of clients. External access is unauthenticated HTTP and is suitable only for trusted lab/demo networks.
 
 ### Default Device List
 
@@ -183,54 +262,13 @@ The upstream MCP server still enforces token authentication on its streamable HT
 
 ### Refreshing MCP Auth And Proxy Resources
 
-If you change the device map, need to recreate the MCP proxy configuration, or want to force a known internal token for troubleshooting, you can refresh the Kubernetes resources manually:
-
-```
-export JMCP_TOKEN_ID=nita-lab
-export JMCP_TOKEN_VALUE="jmcp_change_me"
-
-cat >/tmp/junos-mcp-tokens.json <<EOF
-{
-  "${JMCP_TOKEN_ID}": {
-    "token": "${JMCP_TOKEN_VALUE}",
-    "description": "NITA lab/demo internal token",
-    "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  }
-}
-EOF
-
-cat >/tmp/junos-mcp-nginx.conf <<EOF
-server {
-    listen 8090;
-  location /mcp {
-    rewrite ^/mcp$ /mcp/ break;
-        proxy_pass http://127.0.0.1:8091;
-        proxy_http_version 1.1;
-        proxy_set_header Authorization "Bearer ${JMCP_TOKEN_VALUE}";
-      proxy_set_header Accept \$http_accept;
-      proxy_set_header Content-Type \$content_type;
-      proxy_set_header Host \$host;
-        proxy_set_header Connection "";
-        proxy_buffering off;
-        proxy_request_buffering off;
-        proxy_read_timeout 3600;
-    }
-}
-EOF
-
-kubectl -n nita delete secret junos-mcp-auth --ignore-not-found
-kubectl -n nita create secret generic junos-mcp-auth \
-  --from-file=.tokens=/tmp/junos-mcp-tokens.json
-
-kubectl -n nita delete cm junos-mcp-proxy-cm --ignore-not-found
-kubectl -n nita create cm junos-mcp-proxy-cm \
-  --from-file=default.conf=/tmp/junos-mcp-nginx.conf
-
-kubectl -n nita rollout restart deploy/junos-mcp
-kubectl -n nita rollout status deploy/junos-mcp
-```
-
-The internal token is only used by the in-pod nginx proxy. Off-box clients still connect to ``http://<node-ip>:8090/mcp/`` without sending any ``Authorization`` header.
+Rerun the optional MCP installation to reuse its existing token. To rotate it,
+set `JUNOS_MCP_ROTATE=true` and `JUNOS_MCP_TOKEN_VALUE` to the new value
+in the installer environment; the installer updates the single Secret used by
+both containers and restarts the pod. Avoid exposing token values in shell
+history or logs. If a rollout fails, restore the backed-up MCP Deployment and
+matching Secret and wait for readiness. Clients still connect to
+``http://<node-ip>:8090/mcp/`` without an Authorization header.
 
 # History
 
@@ -321,7 +359,8 @@ jenkins   1/1     1            1           5h21m
 proxy     1/1     1            1           52d
 webapp    1/1     1            1           25h
 ```
-The files ```db-service.yaml```, ```jenkins-service.yaml```, ```proxy-service.yaml``` and ```webapp-service.yaml``` are used to expose ports between the applications and to the outside world:
+The Services expose the application ports inside the cluster. Traefik listens
+on host port 443 and routes via the NITA Ingress resources:
 ```
 jcluser@ubuntu:~$ kubectl get services -n nita
 NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)             AGE
@@ -349,12 +388,13 @@ keytool -genkey -keyalg RSA -alias selfsigned -keystore jenkins_keystore.jks -ke
 keytool -importkeystore -srckeystore jenkins_keystore.jks -destkeystore jenkins.p12 -deststoretype PKCS12
 openssl pkcs12 -in jenkins.p12 -nokeys -out jenkins.crt
 ```
-Other special considerations are configmaps for jenkins and its proxy:
+Create the Jenkins ConfigMaps, then prepare the Traefik ConfigMaps and TLS
+Secret before applying the workloads:
 ```
 kubectl create configmap jenkins-crt --from-file=/home/jcluser/nita-jenkins/certificates/jenkins.crt --namespace nita
 kubectl create cm jenkins-keystore --from-file=/home/jcluser/nita-jenkins/certificates/jenkins_keystore.jks --namespace nita
-kubectl create cm proxy-config-cm --from-file=/home/jcluser/nginx/nginx.conf --namespace nita
-kubectl create cm proxy-cert-cm --from-file=/home/jcluser/nginx/certificates/ --namespace nita
+export CERTS=/path/to/proxy/certificates
+bash k8s/prepare-traefik.sh
 ```
 as shown here:
 ```
@@ -362,8 +402,9 @@ jcluser@ubuntu:~$ kubectl get cm -n nita
 NAME               DATA   AGE
 jenkins-crt        1      52d
 jenkins-keystore   1      52d
-proxy-cert-cm      2      52d
-proxy-config-cm    1      52d
+nita-traefik-config        2      1m
+nita-traefik-bodylimit     3      1m
+nita-traefik-identityguard 3      1m
 ```
 
 # Troubleshooting

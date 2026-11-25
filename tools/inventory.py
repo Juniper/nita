@@ -89,8 +89,8 @@ def discover(root):
             match = re.match(r"(?:pip3?|python3?\s+-m\s+pip)\s+install\s+(.+)", line)
             if match:
                 add("python-install", match[1], path, number)
-            if "${INSTALLER}" in line:
-                match = re.fullmatch(r'eval "\$\{INSTALLER\} ([^"]+)"', line)
+            if re.match(r"InstallPackages(?:\s|$)", line):
+                match = re.fullmatch(r"InstallPackages\s+(.+?)\s*\|\| exit 1", line)
                 if not match:
                     raise InventoryError(f"Unsupported package declaration: {path}:{number}")
                 for token in shlex.split(match[1]):
@@ -99,6 +99,8 @@ def discover(root):
                     if not re.fullmatch(r"[a-zA-Z0-9.+_-]+", token):
                         raise InventoryError(f"Unresolved package: {path}:{number}: {token}")
                     add("package", token, path, number)
+            if "${INSTALLER}" in line:
+                raise InventoryError(f"Unsupported package declaration: {path}:{number}")
             match = re.match(r'NITA_REPOS="([^"]+)"', line)
             if match:
                 for name in match[1].split():

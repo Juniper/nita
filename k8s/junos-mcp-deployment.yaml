@@ -49,15 +49,25 @@ spec:
               mountPath: /app/.tokens
               subPath: .tokens
         - name: junos-mcp-proxy
-          image: nginx:stable
+          image: traefik:v3.7.19
+          args:
+            - "--entrypoints.mcp.address=:8090"
+            - "--entrypoints.mcp.transport.respondingtimeouts.readtimeout=0s"
+            - "--entrypoints.mcp.transport.respondingtimeouts.writetimeout=0s"
+            - "--providers.file.filename=/etc/traefik/routes.yaml"
           ports:
             - containerPort: 8090
               hostPort: 8090
               protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: 8090
+            periodSeconds: 2
           volumeMounts:
             - name: proxy-config
-              mountPath: /etc/nginx/conf.d/default.conf
-              subPath: default.conf
+              mountPath: /etc/traefik/routes.yaml
+              subPath: routes.yaml
+              readOnly: true
       restartPolicy: Always
       volumes:
         - name: devices-config
@@ -68,13 +78,13 @@ spec:
                 path: devices.json
         - name: auth-tokens
           secret:
-            secretName: junos-mcp-auth
+            secretName: junos-mcp-traefik-auth
             items:
               - key: .tokens
                 path: .tokens
         - name: proxy-config
-          configMap:
-            name: junos-mcp-proxy-cm
+          secret:
+            secretName: junos-mcp-traefik-auth
             items:
-              - key: default.conf
-                path: default.conf
+              - key: routes.yaml
+                path: routes.yaml

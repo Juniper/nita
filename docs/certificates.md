@@ -2,7 +2,7 @@
 
 ## Kubernetes Certificates
 
-The [Kubernetes documentation](https://kubernetes.io/docs/setup/best-practices/certificates/) says "If you install Kubernetes with `kubeadm`, the certificates that your cluster requires are automatically generated." This is the method used by the NITA install script (the openssl commands are for nginx and Jenkins). kubeadm-managed leaf certificates have a default validity of one year, configurable in kubeadm settings. kubeadm cannot renew certificates managed by an external CA.
+The [Kubernetes documentation](https://kubernetes.io/docs/setup/best-practices/certificates/) says "If you install Kubernetes with `kubeadm`, the certificates that your cluster requires are automatically generated." This is the method used by the NITA install script (the openssl commands are for Traefik and Jenkins). kubeadm-managed leaf certificates have a default validity of one year, configurable in kubeadm settings. kubeadm cannot renew certificates managed by an external CA.
 
 To see when your Kubernetes certificates will expire, run this command:
 

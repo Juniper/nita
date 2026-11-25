@@ -22,7 +22,7 @@ if [[ -z "${CSRF_TRUSTED_ORIGINS:-}" ]]; then
 fi
 export CSRF_TRUSTED_ORIGINS
 
-set -e
+set -eo pipefail
 
 echo "Applying k8s YAML file to setup necessary pods!!!"
 echo "Please be sure you are in the same folder as the yaml files"
@@ -34,9 +34,9 @@ echo "Using Robot image: ${NITA_ROBOT_IMAGE}"
 echo "Using Junos MCP image: ${JUNOS_MCP_IMAGE}"
 echo "Using CSRF trusted origins: ${CSRF_TRUSTED_ORIGINS}"
 
-BASE_FILES="nita-namespace.yaml storageClass.yaml pv.yaml pv2.yaml mariadb-persistentvolumeclaim.yaml jenkins-home-persistentvolumeclaim.yaml service-account.yaml cluster-role.yaml role-binding.yaml"
+BASE_FILES="nita-namespace.yaml storageClass.yaml pv.yaml pv2.yaml mariadb-persistentvolumeclaim.yaml jenkins-home-persistentvolumeclaim.yaml service-account.yaml cluster-role.yaml role-binding.yaml traefik-resources.yaml"
 WORKLOAD_FILES="db-service.yaml db-deployment.yaml webapp-service.yaml webapp-deployment.yaml jenkins-service.yaml jenkins-network-policy.yaml jenkins-deployment.yaml proxy-deployment.yaml"
-REQUIRED_CONFIGMAPS="proxy-config-cm proxy-cert-cm jenkins-crt jenkins-keystore"
+REQUIRED_CONFIGMAPS="nita-traefik-config nita-traefik-bodylimit nita-traefik-identityguard jenkins-crt jenkins-keystore"
 
 ApplyYaml() {
     # shellcheck disable=SC2016 -- envsubst needs literal variable names here.
@@ -51,13 +51,37 @@ missing=0
 for cm in ${REQUIRED_CONFIGMAPS}; do
     if ! kubectl get cm "${cm}" --namespace nita >/dev/null 2>&1; then
         echo "Error: required ConfigMap \"${cm}\" is missing in namespace nita." >&2
-        echo "Create the proxy and Jenkins ConfigMaps before applying workloads." >&2
+        echo "Create the Traefik and Jenkins ConfigMaps before applying workloads." >&2
         missing=1
     fi
 done
 
+if ! kubectl get secret nita-traefik-tls --namespace nita >/dev/null 2>&1; then
+    echo "Error: required TLS Secret \"nita-traefik-tls\" is missing in namespace nita." >&2
+    missing=1
+fi
+
 [ "${missing}" -eq 0 ] || exit 1
 
+python3 ./preflight-traefik.py
+
 for f in ${WORKLOAD_FILES}; do
+    if [ "$f" = proxy-deployment.yaml ]; then
+        kubectl rollout status deployment/webapp -n nita --timeout=5m
+        python3 ./verify-webapp-auth.py || {
+            echo "Error: incompatible webapp image; the existing proxy was not replaced. Restore the previous webapp image if upgrading." >&2
+            exit 1
+        }
+    fi
     ApplyYaml "${f}"
 done
+
+if ! kubectl rollout status deployment/proxy -n nita --timeout=3m; then
+    echo "Error: Traefik proxy rollout failed; restore the previous proxy and webapp as documented." >&2
+    exit 1
+fi
+
+python3 ./verify-proxy.py || {
+    echo "Error: proxy verification failed; restore the previous proxy and webapp as documented." >&2
+    exit 1
+}
