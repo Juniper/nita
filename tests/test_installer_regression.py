@@ -250,10 +250,15 @@ class InstallerRegressionTests(unittest.TestCase):
             rendered_jenkins,
         )
 
-    def test_fork_ci_uses_canonical_images_and_gates_upstream_arm_runner(self):
+    def test_fork_ci_builds_latest_webapp_main_and_gates_upstream_arm_runner(self):
         workflow = NITA_CI.read_text(encoding="utf-8")
-        self.assertNotIn("github.repository_owner", workflow)
-        self.assertIn("ghcr.io/juniper/nita-webapp:latest", workflow)
+        self.assertIn("format('{0}/nita-webapp', github.repository_owner)", workflow)
+        self.assertIn("vars.NITA_WEBAPP_SOURCE_REPOSITORY", workflow)
+        self.assertIn("vars.NITA_WEBAPP_SOURCE_REF", workflow)
+        self.assertIn("vars.NITA_WEBAPP_SOURCE_REF || 'main'", workflow)
+        self.assertNotRegex(workflow, r"WEBAPP_REF:.*'[0-9a-f]{40}'")
+        e2e_workflow = workflow.split("  e2e-kind:", 1)[1]
+        self.assertNotIn("ghcr.io/juniper/nita-webapp:latest", e2e_workflow)
         self.assertIn("ghcr.io/juniper/nita-jenkins:latest", workflow)
         self.assertIn("ghcr.io/juniper/nita-ansible:latest", workflow)
         self.assertIn("ghcr.io/juniper/nita-robot:latest", workflow)
@@ -261,7 +266,7 @@ class InstallerRegressionTests(unittest.TestCase):
         self.assertIn("github.repository == 'Juniper/nita'", workflow)
         self.assertIn("vars.NITA_ARM_CI_ENABLED == 'true'", workflow)
 
-    def test_kind_ci_loads_source_or_published_webapp_image(self):
+    def test_kind_ci_loads_source_built_webapp_without_registry_fallback(self):
         workflow = yaml.safe_load(NITA_CI.read_text(encoding="utf-8"))
         steps = workflow["jobs"]["e2e-kind"]["steps"]
         script = next(
@@ -273,34 +278,40 @@ class InstallerRegressionTests(unittest.TestCase):
                 executable = Path(directory) / name
                 executable.write_text(f'#!/bin/sh\nprintf "{name} %s\\n" "$*"\n')
                 executable.chmod(0o755)
-            for from_source, image in (
-                ("true", "nita-webapp-verification:local"),
-                ("false", "registry.example/webapp:release"),
-            ):
-                with self.subTest(from_source=from_source):
-                    env = os.environ | {
-                        "PATH": directory + os.pathsep + os.environ["PATH"],
-                        "NITA_WEBAPP_FROM_SOURCE": from_source,
-                        "NITA_WEBAPP_IMAGE": image,
-                        "NITA_JENKINS_IMAGE": "jenkins:test",
-                        "NITA_ANSIBLE_IMAGE": "ansible:test",
-                        "NITA_ROBOT_IMAGE": "robot:test",
-                        "CLUSTER_NAME": "test-cluster",
-                    }
-                    result = subprocess.run(
-                        ["bash", "-e", "-c", script],
-                        env=env, text=True, capture_output=True, check=True,
-                    )
-                    self.assertIn(
-                        f"kind load docker-image {image} --name test-cluster",
-                        result.stdout,
-                    )
-                    self.assertEqual(
-                        f"docker pull {image}" in result.stdout,
-                        from_source == "false",
-                    )
+            image = "nita-webapp-verification:local"
+            env = os.environ | {
+                "PATH": directory + os.pathsep + os.environ["PATH"],
+                "NITA_WEBAPP_IMAGE": image,
+                "NITA_JENKINS_IMAGE": "jenkins:test",
+                "NITA_ANSIBLE_IMAGE": "ansible:test",
+                "NITA_ROBOT_IMAGE": "robot:test",
+                "CLUSTER_NAME": "test-cluster",
+            }
+            result = subprocess.run(
+                ["bash", "-e", "-c", script],
+                env=env, text=True, capture_output=True, check=True,
+            )
+            self.assertIn(
+                f"kind load docker-image {image} --name test-cluster",
+                result.stdout,
+            )
+            self.assertNotIn(f"docker pull {image}", result.stdout)
+        checkout = next(
+            step for step in steps
+            if step.get("name") == "Check out companion webapp"
+        )
+        self.assertNotIn("if", checkout)
+        self.assertEqual(
+            checkout["with"]["repository"], "${{ env.WEBAPP_REPOSITORY }}"
+        )
+        self.assertEqual(checkout["with"]["ref"], "${{ env.WEBAPP_REF }}")
+        build = next(
+            step for step in steps
+            if step.get("name") == "Build companion webapp test image"
+        )
+        self.assertNotIn("if", build)
 
-    def test_kind_ci_requires_complete_pinned_companion_source(self):
+    def test_kind_ci_validates_webapp_source_selection(self):
         workflow = yaml.safe_load(NITA_CI.read_text(encoding="utf-8"))
         steps = workflow["jobs"]["e2e-kind"]["steps"]
         script = next(
@@ -308,12 +319,16 @@ class InstallerRegressionTests(unittest.TestCase):
             if step.get("name") == "Validate companion source selection"
         )
         for repository, ref, expected in (
-            ("", "", 0),
+            ("example/nita-webapp", "main", 0),
+            ("example/nita-webapp", "feature/proxy-auth", 0),
+            ("example/nita-webapp", "v1.2.3", 0),
             ("example/nita-webapp", "a" * 40, 0),
             ("example/nita-webapp", "", 1),
-            ("", "a" * 40, 1),
-            ("example/nita-webapp", "main", 1),
-            ("example/nita-webapp;echo", "a" * 40, 1),
+            ("example/nita-webapp", "-main", 1),
+            ("example/nita-webapp", "main;echo", 1),
+            ("example/nita-webapp", "a..b", 1),
+            ("example/nita-webapp;echo", "main", 1),
+            ("nita-webapp", "main", 1),
         ):
             with self.subTest(repository=repository, ref=ref):
                 result = subprocess.run(
@@ -325,6 +340,44 @@ class InstallerRegressionTests(unittest.TestCase):
                     text=True, capture_output=True,
                 )
                 self.assertEqual(result.returncode, expected)
+
+    def test_kind_ci_records_tested_webapp_commit(self):
+        workflow = yaml.safe_load(NITA_CI.read_text(encoding="utf-8"))
+        steps = workflow["jobs"]["e2e-kind"]["steps"]
+        names = [step.get("name") for step in steps]
+        record_index = names.index("Record companion webapp commit")
+        self.assertLess(names.index("Check out companion webapp"), record_index)
+        self.assertLess(
+            record_index, names.index("Build companion webapp test image")
+        )
+        script = steps[record_index]["run"]
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / ".ci-webapp"
+            repo.mkdir()
+            git = ["git", "-C", str(repo)]
+            subprocess.run(git + ["init", "-q"], check=True)
+            subprocess.run(
+                git + ["-c", "user.name=t", "-c", "user.email=t@t",
+                       "commit", "-q", "--allow-empty", "-m", "x"],
+                check=True,
+            )
+            sha = subprocess.run(
+                git + ["rev-parse", "HEAD"],
+                text=True, capture_output=True, check=True,
+            ).stdout.strip()
+            summary = Path(directory) / "summary.md"
+            result = subprocess.run(
+                ["bash", "-e", "-c", script],
+                cwd=directory,
+                env=os.environ | {
+                    "WEBAPP_REPOSITORY": "example/nita-webapp",
+                    "WEBAPP_REF": "main",
+                    "GITHUB_STEP_SUMMARY": str(summary),
+                },
+                text=True, capture_output=True, check=True,
+            )
+            self.assertIn(f"example/nita-webapp@{sha}", result.stdout)
+            self.assertIn(f"example/nita-webapp@{sha}", summary.read_text())
 
     def test_junos_mcp_publisher_is_multiarch_and_upstream_only(self):
         workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")

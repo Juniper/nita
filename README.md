@@ -170,13 +170,17 @@ export NITA_JENKINS_IMAGE=ghcr.io/juniper/nita-jenkins@sha256:<digest>
 sudo -E ./install.sh
 ```
 
-For a coordinated CI test before the compatible webapp image is published,
-manually run the NITA CI workflow with `webapp_repository` set to the public
-companion repository (`owner/repo`) and `webapp_ref` set to its full commit
-SHA. CI builds that revision locally and loads the image into Kind; it does not
-publish it. Leave both inputs empty to test the published image selected by the
-`NITA_WEBAPP_IMAGE` repository variable or its default. This source-build
-verification does not replace testing the final published release image.
+The NITA Kind CI test always builds the companion webapp image from source and
+loads it locally into Kind, so every run tests current webapp code; it never
+pulls the webapp image from a registry or publishes the test image. By default
+it builds the latest commit on the `main` branch of
+`<NITA repository owner>/nita-webapp`, and the job summary records the exact
+webapp commit SHA that was tested. The `NITA_WEBAPP_SOURCE_REPOSITORY`
+(`owner/repo`) and `NITA_WEBAPP_SOURCE_REF` (branch, tag or commit SHA)
+repository variables change those defaults. A manual workflow run can override
+either value with the `webapp_repository` and `webapp_ref` inputs, for example
+`webapp_ref=<sha>` to reproduce an earlier run. This source-build integration
+check does not replace testing the final published release image.
 
 ## Container Images and Architectures
 

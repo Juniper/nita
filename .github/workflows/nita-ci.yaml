@@ -14,11 +14,11 @@ on:
         type: boolean
         default: false
       webapp_repository:
-        description: Public companion webapp repository for a source-built test image (owner/repo)
+        description: Public companion webapp repository to build (owner/repo); defaults to <owner>/nita-webapp
         type: string
         required: false
       webapp_ref:
-        description: Exact 40-character commit SHA of the companion webapp
+        description: Webapp branch, tag or commit SHA to build; defaults to main
         type: string
         required: false
 
@@ -128,8 +128,9 @@ jobs:
       CLUSTER_NAME: nita-${{ matrix.architecture }}
       CONTAINER_REGISTRY: ghcr.io/juniper
       GITHUB_ORG: Juniper
-      NITA_WEBAPP_IMAGE: ${{ inputs.webapp_repository != '' && 'nita-webapp-verification:local' || vars.NITA_WEBAPP_IMAGE || 'ghcr.io/juniper/nita-webapp:latest' }}
-      NITA_WEBAPP_FROM_SOURCE: ${{ inputs.webapp_repository != '' && 'true' || 'false' }}
+      NITA_WEBAPP_IMAGE: nita-webapp-verification:local
+      WEBAPP_REPOSITORY: ${{ inputs.webapp_repository || vars.NITA_WEBAPP_SOURCE_REPOSITORY || format('{0}/nita-webapp', github.repository_owner) }}
+      WEBAPP_REF: ${{ inputs.webapp_ref || vars.NITA_WEBAPP_SOURCE_REF || 'main' }}
       NITA_JENKINS_IMAGE: ghcr.io/juniper/nita-jenkins:latest
       NITA_ANSIBLE_IMAGE: ghcr.io/juniper/nita-ansible:latest
       NITA_ROBOT_IMAGE: ghcr.io/juniper/nita-robot:latest
@@ -138,30 +139,34 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
 
+      # The webapp image is always built from source so CI tests current
+      # webapp code (default: latest commit on main), never a registry tag.
       - name: Validate companion source selection
-        env:
-          WEBAPP_REPOSITORY: ${{ inputs.webapp_repository }}
-          WEBAPP_REF: ${{ inputs.webapp_ref }}
         run: |
-          if [[ -z "$WEBAPP_REPOSITORY" && -z "$WEBAPP_REF" ]]; then
-            exit 0
+          if [[ ! "$WEBAPP_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "webapp repository must be a public owner/repository, got '${WEBAPP_REPOSITORY}'." >&2
+            exit 1
           fi
-          if [[ ! "$WEBAPP_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ || ! "$WEBAPP_REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
-            echo "Both a public owner/repository and a 40-character webapp commit SHA are required." >&2
+          if [[ ! "$WEBAPP_REF" =~ ^[A-Za-z0-9_.][A-Za-z0-9_./-]*$ || "$WEBAPP_REF" == *..* ]]; then
+            echo "webapp ref must be a branch, tag or commit SHA, got '${WEBAPP_REF}'." >&2
             exit 1
           fi
 
       - name: Check out companion webapp
-        if: inputs.webapp_repository != ''
         uses: actions/checkout@v6.0.2
         with:
-          repository: ${{ inputs.webapp_repository }}
-          ref: ${{ inputs.webapp_ref }}
+          repository: ${{ env.WEBAPP_REPOSITORY }}
+          ref: ${{ env.WEBAPP_REF }}
           path: .ci-webapp
           persist-credentials: false
 
+      - name: Record companion webapp commit
+        run: |
+          WEBAPP_SHA="$(git -C .ci-webapp rev-parse HEAD)"
+          echo "Testing ${WEBAPP_REPOSITORY}@${WEBAPP_SHA} (ref: ${WEBAPP_REF})"
+          echo "Webapp source: \`${WEBAPP_REPOSITORY}@${WEBAPP_SHA}\` (ref \`${WEBAPP_REF}\`)" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Build companion webapp test image
-        if: inputs.webapp_repository != ''
         run: docker build --tag "$NITA_WEBAPP_IMAGE" .ci-webapp
 
       # gettext-base  — provides envsubst (used by apply-k8s.sh)
@@ -207,9 +212,6 @@ jobs:
             docker pull "${img}"
             kind load docker-image "${img}" --name "${CLUSTER_NAME}"
           done
-          if [[ "$NITA_WEBAPP_FROM_SOURCE" != "true" ]]; then
-            docker pull "${NITA_WEBAPP_IMAGE}"
-          fi
           kind load docker-image "${NITA_WEBAPP_IMAGE}" --name "${CLUSTER_NAME}"
 
       # Apply resources with no ConfigMap dependencies first:
