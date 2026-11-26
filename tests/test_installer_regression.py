@@ -1,6 +1,9 @@
+import ast
+import configparser
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -378,6 +381,59 @@ class InstallerRegressionTests(unittest.TestCase):
             )
             self.assertIn(f"example/nita-webapp@{sha}", result.stdout)
             self.assertIn(f"example/nita-webapp@{sha}", summary.read_text())
+
+    def test_kind_ci_installs_third_party_imports_of_its_pytest_modules(self):
+        if not hasattr(sys, "stdlib_module_names"):
+            self.skipTest("requires Python 3.10+")
+        steps = yaml.safe_load(NITA_CI.read_text(encoding="utf-8"))[
+            "jobs"]["e2e-kind"]["steps"]
+        install = next(
+            step["run"] for step in steps
+            if step.get("name") == "Install integration-test dependencies"
+        )
+        installed = set()
+        for requirements in re.findall(r"-r\s+(\S+)", install):
+            for line in (ROOT / requirements).read_text().splitlines():
+                name = re.match(r"[A-Za-z0-9_.-]*", line.strip()).group()
+                if name:
+                    installed.add(name.lower().replace("_", "-"))
+        test_files = set()
+        for step in steps:
+            run = step.get("run", "")
+            if not re.search(r"^\s*pytest\b", run, re.M):
+                continue
+            test_files.update(
+                ROOT / path for path in re.findall(r"tests/[\w/]+\.py", run)
+            )
+            config = re.search(r"pytest -c (\S+\.ini)", run)
+            if config:
+                parser = configparser.ConfigParser()
+                parser.read(ROOT / config.group(1))
+                for testpath in parser["pytest"]["testpaths"].split():
+                    test_files.update((ROOT / testpath).glob("*.py"))
+        self.assertIn(ROOT / "tests" / "test_software_inventory.py", test_files)
+        # urllib3 is installed as a dependency of requests.
+        distributions = {"yaml": "pyyaml", "urllib3": "requests"}
+        missing = set()
+        for path in test_files:
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if isinstance(node, ast.Import):
+                    modules = [alias.name for alias in node.names]
+                elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                    modules = [node.module]
+                else:
+                    continue
+                for module in modules:
+                    top = module.split(".")[0]
+                    local = (ROOT / top).is_dir() or any(
+                        (ROOT / directory / f"{top}.py").exists()
+                        for directory in ("tests", "tools")
+                    )
+                    if top in sys.stdlib_module_names or local:
+                        continue
+                    if distributions.get(top, top) not in installed:
+                        missing.add(f"{path.relative_to(ROOT)}: {top}")
+        self.assertEqual(sorted(missing), [])
 
     def test_junos_mcp_publisher_is_multiarch_and_upstream_only(self):
         workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")

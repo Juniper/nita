@@ -413,8 +413,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      # requirements-inventory.txt provides jsonschema for test_software_inventory.py.
       - name: Install integration-test dependencies
-        run: pip install -r requirements-integration-test.txt
+        run: pip install -r requirements-integration-test.txt -r requirements-inventory.txt
 
       - name: Verify the real webapp session and Jenkins identity through Traefik
         env:
