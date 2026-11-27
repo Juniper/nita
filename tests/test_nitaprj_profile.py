@@ -457,6 +457,34 @@ class NitaprjProfileTests(unittest.TestCase):
         self.assertEqual(effective["netconf_passwd"], runtime["netconf_passwd"])
         self.assertEqual(effective["netconf_port"], 830)
 
+    def test_create_profile_selection(self):
+        for profile_args, expected_profile in (([], "jtaf-ansible"), (["generic"], "generic")):
+            with self.subTest(profile=expected_profile):
+                project_name = f"nitaprj-test-{uuid.uuid4().hex}"
+                project_dir = NITAPRJ_DIR / project_name
+                try:
+                    result = subprocess.run(
+                        ["bash", str(NITAPRJ_SCRIPT), "create", project_name, *profile_args],
+                        cwd=NITAPRJ_DIR,
+                        input="n\n",
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn(f"using profile '{expected_profile}'", result.stdout)
+                    self.assertEqual(
+                        (project_dir / "build.sh").read_bytes(),
+                        (NITAPRJ_DIR / "profiles" / expected_profile / "build.sh").read_bytes(),
+                    )
+                    self.assertEqual(
+                        (project_dir / "enrich_variables.py").exists(),
+                        expected_profile == "jtaf-ansible",
+                    )
+                finally:
+                    shutil.rmtree(project_dir, ignore_errors=True)
+
     def test_jtaf_ansible_create_renders_and_packages_project_yaml(self):
         project_name = f"nitaprj-test-{uuid.uuid4().hex}"
         project_dir = NITAPRJ_DIR / project_name
